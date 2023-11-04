@@ -15,7 +15,7 @@ include(GreenDeps)
 
 add_green_dependency(green-grids)
 add_green_dependency(green-h5pp)
-add_green_dependency(green-ndarrays)
+add_green_dependency(green-ndarray)
 add_green_dependency(green-params)
 add_green_dependency(green-symmetry)
 add_green_dependency(green-utils)
