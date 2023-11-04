@@ -23,23 +23,6 @@
 #include "solver.h"
 
 namespace green::sc {
-
-  inline void define_parameters(params::params& p) {
-    p.define<mixing_type>("mixing_type", "Type of iteration convergence mixing. We use no mixing by default", NO_MIXING);
-    p.define<double>("damping",
-                     "Simple mixing paramters between current ad previous iteration. Should be between 0 and 1: 0 - no damping, "
-                     "1 - full damping.",
-                     0.5);
-    p.define<std::string>("results_file,", "File to store results", "sim.h5");
-    p.define<std::string>("input_file,", "File with input data", "input.h5");
-    p.define<bool>("restart", "Try to restart simulation from the previously obtained results");
-    p.define<unsigned>("itermax", "Maximum number of iterations", 1);
-    p.define<double>("BETA", "Inverse temperature");
-    p.define<bool>("const_density", "Maintain constant number of electrons through iterations", true);
-    p.define<double>("E_thr", "Energy convergence threshold", 1e-9);
-    p.define<double>("E_thr_sp", "Energy convergence threshold if run in single precision", 1e-5);
-  }
-
   /**
    * @brief sc_loop class perform the main self-consistency loop for self-energy
    * evaluation

@@ -16,11 +16,6 @@ using namespace std::string_literals;
 
 namespace green::sc {
   /**
-   *
-   */
-  enum mixing_type { NO_MIXING, G_DAMPING, SIGMA_DAMPING, DIIS };
-
-  /**
    * Base interface for iteration mixing
    *
    * @tparam G - type of the Green's function obejct

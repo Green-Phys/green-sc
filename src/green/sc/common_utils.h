@@ -7,6 +7,7 @@
 
 #include <green/h5pp/archive.h>
 #include <green/ndarray/ndarray.h>
+#include <green/ndarray/ndarray_math.h>
 #include <green/utils/mpi_shared.h>
 
 namespace green::sc::internal {
