@@ -110,7 +110,7 @@ namespace green::sc {
         t.start("Check convergence");
         double diff = _dyson_solver.diff(g0_tau, sigma1, sigma_tau);
         t.end();
-        if (diff < _e_thr) break;
+        if (std::abs(diff) < _e_thr) break;
       }
       t.end();
       t.print(_context.global);
