@@ -26,7 +26,7 @@ namespace green::sc {
   template <typename... Solvers>
   class composition_solver {
   public:
-    composition_solver(Solvers... solvers) : _solvers(std::move(solvers)...) {}
+    composition_solver(Solvers&... solvers) : _solvers(std::ref(solvers)...) {}
 
     template <typename G, typename S1, typename St>
     void solve(G& g_tau, S1& sigma1, St& sigma_tau) {
@@ -35,7 +35,7 @@ namespace green::sc {
     }
 
   private:
-    std::tuple<Solvers...> _solvers;
+    std::tuple<Solvers&...> _solvers;
   };
 }  // namespace green::sc
 #endif  // SC_SOLVER_H
