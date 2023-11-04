@@ -100,9 +100,6 @@ namespace green::sc {
         t.start("Iteration mixing");
         _mix.update(_iter, g0_tau, sigma1, sigma_tau);
         t.end();
-        t.start("Dyson");
-        _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
-        t.end();
         t.start("Check convergence");
         double diff = _dyson_solver.diff(g0_tau, sigma1, sigma_tau);
         t.end();
@@ -114,6 +111,9 @@ namespace green::sc {
         }
         t.end();
         if (std::abs(diff) < _e_thr) break;
+        t.start("Dyson");
+        _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
+        t.end();
       }
       t.end();
       t.print(_context.global);
@@ -140,7 +140,7 @@ namespace green::sc {
       internal::read(sigma_tau, "iter" + std::to_string(_iter) + "/Selfenergy/data", ar);
       internal::read(g_tau, "iter" + std::to_string(_iter) + "/G_tau/data", ar);
       ar.close();
-      return _iter;
+      return _iter + 1;
     }
 
     /**
