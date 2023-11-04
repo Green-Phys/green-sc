@@ -90,15 +90,21 @@ namespace green::sc {
       t.end();
 
       t.start("Self-consistency loop");
+      t.start("Dyson");
+      _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
+      t.end();
       for (_iter = start_iter, iter = 0; iter < _itermax; ++iter, ++_iter) {
-        t.start("Dyson");
-        _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
-        t.end();
         t.start("Diagrammatic solver");
         solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
         t.start("Iteration mixing");
         _mix.update(_iter, g0_tau, sigma1, sigma_tau);
+        t.end();
+        t.start("Dyson");
+        _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
+        t.end();
+        t.start("Check convergence");
+        double diff = _dyson_solver.diff(g0_tau, sigma1, sigma_tau);
         t.end();
         // store results from current iteration
         t.start("Store results");
@@ -106,9 +112,6 @@ namespace green::sc {
           dump_iteration(_iter, g0_tau, sigma1, sigma_tau);
           _dyson_solver.dump_iteration(_iter, _results_file);
         }
-        t.end();
-        t.start("Check convergence");
-        double diff = _dyson_solver.diff(g0_tau, sigma1, sigma_tau);
         t.end();
         if (std::abs(diff) < _e_thr) break;
       }
