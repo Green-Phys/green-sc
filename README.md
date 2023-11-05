@@ -99,3 +99,7 @@ square_equation_solver solver(p["a"], p["b"]);
 // solve equation
 sc.solve(solver, g, s1, st);
 ```
+
+# Acknowledgements
+
+This work is supported by National Science Foundation under the award CSSI-2310582
