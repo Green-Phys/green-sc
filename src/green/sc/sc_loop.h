@@ -57,10 +57,14 @@ namespace green::sc {
 
   public:
     sc_loop(MPI_Comm comm, green::params::params& p) :
-        _itermax(p["itermax"]), _iter(0), _e_thr(p["E_thr"]), _e_thr_sp(p["E_thr_sp"]), _input_path(p["input_file"]),
+        _itermax(p["itermax"]), _iter(0), _e_thr(p["threshold"]), _e_thr_sp(p["E_thr_sp"]), _input_path(p["input_file"]),
         _results_file(p["results_file"]), _restart(p["restart"]), _mix(p), _dyson_solver(p), _context(comm) {
       if (!_restart) {
-        if (!_context.global_rank) std::filesystem::remove(_results_file);
+        if (!_context.global_rank) {std::filesystem::remove(_results_file);}
+        MPI_Barrier(comm);
+      }
+      if (!_context.global_rank) {
+        internal::dump_parameters(p, _results_file);
         MPI_Barrier(comm);
       }
     }
@@ -135,6 +139,9 @@ namespace green::sc {
         return 0;
       }
       h5pp::archive ar(_results_file);
+      if(!h5pp::dataset_exists(ar.current_id(), "iter")) {
+        return 0;
+      }
       ar["iter"] >> _iter;
       internal::read(sigma_1, "iter" + std::to_string(_iter) + "/Sigma1", ar);
       internal::read(sigma_tau, "iter" + std::to_string(_iter) + "/Selfenergy/data", ar);

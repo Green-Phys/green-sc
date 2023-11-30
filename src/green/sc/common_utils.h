@@ -72,6 +72,18 @@ namespace green::sc::internal {
   }
 
   void read(utils::shared_object<ztensor<5>>& v, const std::string& path, h5pp::archive& ar) { ar[path] >> v.object(); }
+
+  inline void dump_parameters(const params::params & p, const std::string & results_file) {
+    h5pp::archive ar(results_file, "a");
+    for(const auto & param : p.params_set()) {
+      const params::params_item & item = *param.get();
+      ar["params/" + item.name() + "/value"] << item.entry()->print();
+      if(!item.aka().empty()) {
+        ar["params/" + item.name() + "/aliases"] << item.aka();
+      }
+    }
+    ar.close();
+  }
 }  // namespace green::sc::internal
 
 #endif  // SC_COMMON_UTILS_H

@@ -53,12 +53,12 @@ namespace green::sc {
                      "1 - full damping.",
                      0.5);
     p.define<std::string>("results_file,", "File to store results", "sim.h5");
-    p.define<std::string>("input_file,", "File with input data", "input.h5");
     p.define<bool>("restart", "Try to restart simulation from the previously obtained results", false);
     p.define<unsigned>("itermax", "Maximum number of iterations", 1);
-    p.define<bool>("const_density", "Maintain constant number of electrons through iterations", true);
-    p.define<double>("E_thr", "Energy convergence threshold", 1e-9);
+    p.define<double>("E_thr,threshold", "Convergence threshold", 1e-9);
     p.define<double>("E_thr_sp", "Energy convergence threshold if run in single precision", 1e-5);
+    p.define<std::string>("input_file,", "File with input data", "input.h5");
+    p.define<bool>("const_density", "Maintain constant number of electrons through iterations", true);
   }
 }  // namespace green::sc
 #endif  // SC_COMMON_DEFS_H
