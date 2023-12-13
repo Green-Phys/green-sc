@@ -98,6 +98,9 @@ namespace green::sc {
       _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
       t.end();
       for (_iter = start_iter, iter = 0; iter < _itermax; ++iter, ++_iter) {
+        if (!_context.global_rank) {
+          std::cout<<"========== Starting iteration "<<_iter<<" out of "<<_itermax<<" =========="<<std::endl;
+        }
         t.start("Diagrammatic solver");
         solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
