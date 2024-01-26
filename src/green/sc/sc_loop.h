@@ -53,25 +53,15 @@ namespace green::sc {
     // DIIS or simple damping object
     mixing_strategy<G, S1, St> _mix;
     // MPI
-    green::utils::mpi_context  _context;
+    utils::mpi_context  _context;
 
   public:
-    sc_loop(MPI_Comm comm, green::params::params& p) :
+    sc_loop(MPI_Comm comm, params::params& p) :
         _itermax(p["itermax"]), _iter(0), _e_thr(p["threshold"]), _e_thr_sp(p["E_thr_sp"]), _input_path(p["input_file"]),
         _results_file(p["results_file"]), _restart(p["restart"]), _dyson_solver(p), _mix(p), _context(comm) {
-      if (!_restart) {
-        if (!_context.global_rank) {
-          std::filesystem::remove(_results_file);
-        }
-        MPI_Barrier(comm);
-      }
-      if (!_context.global_rank) {
-        internal::dump_parameters(p, _results_file);
-      }
-      MPI_Barrier(comm);
     }
 
-    virtual ~sc_loop() {}
+    virtual ~sc_loop() = default;
 
     /**
      * Solve iterative self-consistency equation
@@ -91,8 +81,14 @@ namespace green::sc {
       utils::timing& t = utils::timing::get_instance();
       t.start("Read results");
       if (_restart) {
-        start_iter = read_results(g0_tau, sigma1, sigma_tau);
+        start_iter = read_results(g0_tau, sigma1, sigma_tau, _results_file);
+      } else {
+        if (!_context.global_rank) {
+          std::filesystem::remove(_results_file);
+        }
+        MPI_Barrier(_context.global);
       }
+      MPI_Barrier(_context.global);
       t.end();
 
       t.start("Self-consistency loop");
@@ -126,33 +122,6 @@ namespace green::sc {
       }
       t.end();
       t.print(_context.global);
-    }
-
-    /**
-     * Read results of the previous unconverged simulation to proceed.
-     *
-     * @tparam G - type of the Green's function
-     * @tparam S1 - type of the static part of the Self-energy
-     * @tparam St - type of the dynamical part of the Self-energy
-     * @param G_tau - [OUT]  Green's function
-     * @param Sigma_1 - [OUT] static part of the Self-energy
-     * @param Sigma_tau - [OUT] dynamic part of the Self-energy
-     * @return last iteration number to start from
-     */
-    size_t read_results(G& g_tau, S1& sigma_1, St& sigma_tau) {
-      if (!std::filesystem::exists(_results_file)) {
-        return 0;
-      }
-      h5pp::archive ar(_results_file);
-      if (!h5pp::dataset_exists(ar.current_id(), "iter")) {
-        return 0;
-      }
-      ar["iter"] >> _iter;
-      internal::read(sigma_1, "iter" + std::to_string(_iter) + "/Sigma1", ar);
-      internal::read(sigma_tau, "iter" + std::to_string(_iter) + "/Selfenergy/data", ar);
-      internal::read(g_tau, "iter" + std::to_string(_iter) + "/G_tau/data", ar);
-      ar.close();
-      return _iter + 1;
     }
 
     /**
