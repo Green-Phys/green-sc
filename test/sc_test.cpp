@@ -175,6 +175,7 @@ TEST_CASE("Self-consistency") {
     solve_with_damping("G_DAMPING", "0.8");
     solve_with_damping("SIGMA_DAMPING", "0.8");
     REQUIRE_THROWS_AS(solve_with_damping("DIIS", "0.8"), green::sc::sc_unknown_mixing_error);
+    REQUIRE_THROWS_AS(solve_with_damping("G_DAMPING", "1.8"), green::sc::sc_incorrect_damping_error);
     REQUIRE_THROWS_AS(solve_with_damping("SIGMA_DAMPING", "1.8"), green::sc::sc_incorrect_damping_error);
   }
 
@@ -244,10 +245,10 @@ TEST_CASE("Self-consistency") {
 TEST_CASE("Shared object init") {
   green::utils::shared_object x(green::ndarray::ndarray<double, 2>(nullptr, 10, 10));
   green::utils::shared_object x_tmp(green::sc::internal::init_data(x));
-  std::string res_file_1 = random_name();
+  std::string                 res_file_1 = random_name();
   {
     x.fence();
-    if (!green::utils::context.node_rank) x.object()(0,0) = 100;
+    if (!green::utils::context.node_rank) x.object()(0, 0) = 100;
     x.fence();
     green::h5pp::archive ar(res_file_1, "w");
     ar["test"] << x.object();
@@ -255,7 +256,7 @@ TEST_CASE("Shared object init") {
   }
   REQUIRE(x.size() == x_tmp.size());
   green::sc::internal::read_data(x_tmp, res_file_1, "test");
-  REQUIRE(x.object()(0,0) == x_tmp.object()(0,0));
+  REQUIRE(x.object()(0, 0) == x_tmp.object()(0, 0));
   std::filesystem::remove(res_file_1);
 }
 
