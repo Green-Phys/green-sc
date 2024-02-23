@@ -11,11 +11,32 @@
 #include <green/utils/mpi_shared.h>
 
 namespace green::sc::internal {
+  template<typename T>
+  class is_default_constructible {
+
+    typedef char yes;
+    typedef struct { char arr[2]; } no;
+
+    template<typename U>
+    static decltype(U(), yes()) test(int);
+
+    template<typename>
+    static no test(...);
+
+  public:
+
+    static constexpr bool value = sizeof(test<T>(0)) == sizeof(yes);
+  };
+
+  template<typename T>
+  constexpr bool is_default_constructible_v = is_default_constructible<T>::value;
+
+
   template <typename T>
   void cleanup_data(T& old) {}
 
   template <typename T>
-  T init_data(T& old) {
+  std::enable_if_t<is_default_constructible_v<T>, T> init_data(T&) {
     T tmp;
     return tmp;
   }
@@ -33,12 +54,14 @@ namespace green::sc::internal {
     old += tmp * damping;
   }
 
-  utils::shared_object<ztensor<5>> init_data(utils::shared_object<ztensor<5>>& g) {
-    ztensor<5> tmp(nullptr, g.object().shape());
-    return utils::shared_object<ztensor<5>>(tmp);
+  template<typename T, size_t N>
+  utils::shared_object<tensor<T, N>> init_data(utils::shared_object<tensor<T, N>>& g) {
+    tensor<T, N> tmp(nullptr, g.object().shape());
+    return utils::shared_object(tmp);
   }
 
-  void read_data(utils::shared_object<ztensor<5>>& tmp, const std::string& fname, const std::string& data_path) {
+  template<typename T>
+  void read_data(utils::shared_object<T>& tmp, const std::string& fname, const std::string& data_path) {
     tmp.fence();
     if (!utils::context.node_rank) {
       h5pp::archive ar(fname);

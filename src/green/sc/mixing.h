@@ -78,7 +78,11 @@ namespace green::sc {
   template <typename G, typename S1, typename St>
   class sigma_damping : public base_mixing<G, S1, St> {
   public:
-    sigma_damping(double d, const std::string& res) : _damping(d), _results_file(res) {}
+    sigma_damping(double d, const std::string& res) : _damping(d), _results_file(res) {
+      if (d < 0.0 || d >= 1.0) {
+        throw sc_incorrect_damping_error("Damping should be in [0,1) interval");
+      }
+    }
     void update(size_t iter, G& g, S1& s1, St& s_t) const override {
       if (iter == 0) {
         return;

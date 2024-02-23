@@ -53,13 +53,12 @@ namespace green::sc {
     // DIIS or simple damping object
     mixing_strategy<G, S1, St> _mix;
     // MPI
-    utils::mpi_context  _context;
+    utils::mpi_context         _context;
 
   public:
     sc_loop(MPI_Comm comm, params::params& p) :
         _itermax(p["itermax"]), _iter(0), _e_thr(p["threshold"]), _e_thr_sp(p["E_thr_sp"]), _input_path(p["input_file"]),
-        _results_file(p["results_file"]), _restart(p["restart"]), _dyson_solver(p), _mix(p), _context(comm) {
-    }
+        _results_file(p["results_file"]), _restart(p["restart"]), _dyson_solver(p), _mix(p), _context(comm) {}
 
     virtual ~sc_loop() = default;
 
