@@ -2,6 +2,7 @@
 [![GitHub license](https://img.shields.io/badge/C%2B%2B-17-blue)](https://en.cppreference.com/w/cpp/compiler_support/17)
 
 ![sc](https://github.com/Green-Phys/h5pp/actions/workflows/h5pp-test.yaml/badge.svg)
+[![codecov](https://codecov.io/gh/Green-Phys/green-sc/graph/badge.svg?token=EW687Z97D3)](https://codecov.io/gh/Green-Phys/green-sc)
 
 # green-sc
 Light-weight header-only implementation of generic iterative self-consistency loop.
