@@ -114,11 +114,16 @@ namespace green::sc {
           _dyson_solver.dump_iteration(_iter, _results_file);
         }
         t.end();
-        if (std::abs(diff) < _e_thr) break;
+        if (std::abs(diff) < _e_thr) {
+          if (!_context.global_rank) std::cout << "============== Simulation Converged ==============" << std::endl;
+          break;
+        }
         t.start("Dyson");
         _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
       }
+      if (!_context.global_rank && iter == _itermax)
+        std::cout << "====== Reached Maximum number of iterations ======" << std::endl;
       t.end();
       t.print(_context.global);
     }
