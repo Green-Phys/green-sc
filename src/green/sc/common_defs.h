@@ -51,7 +51,7 @@ namespace green::sc {
     p.define<double>("damping",
                      "Simple mixing paramters between current ad previous iteration. Should be between 0 and 1: 0 - no damping, "
                      "1 - full damping.",
-                     0.5);
+                     0.7);
     p.define<std::string>("results_file,", "File to store results", "sim.h5");
     p.define<bool>("restart", "Try to restart simulation from the previously obtained results", false);
     p.define<unsigned>("itermax", "Maximum number of iterations", 1);
