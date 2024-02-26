@@ -47,7 +47,7 @@ namespace green::sc {
   }
 
   inline void define_parameters(params::params& p) {
-    p.define<mixing_type>("mixing_type", "Type of iteration convergence mixing. We use no mixing by default", NO_MIXING);
+    p.define<mixing_type>("mixing_type", "Type of iteration convergence mixing. We use no mixing by default", SIGMA_DAMPING);
     p.define<double>("damping",
                      "Simple mixing paramters between current ad previous iteration. Should be between 0 and 1: 0 - no damping, "
                      "1 - full damping.",

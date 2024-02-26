@@ -96,7 +96,8 @@ namespace green::sc {
       t.end();
       for (_iter = start_iter, iter = 0; iter < _itermax; ++iter, ++_iter) {
         if (!_context.global_rank) {
-          std::cout << "========== Starting iteration " << _iter << " out of " << _itermax << " ==========" << std::endl;
+          std::cout << "========== Starting iteration " << _iter << " out of " << _itermax + start_iter
+                    << " ==========" << std::endl;
         }
         t.start("Diagrammatic solver");
         solver.solve(g0_tau, sigma1, sigma_tau);
@@ -118,6 +119,7 @@ namespace green::sc {
           if (!_context.global_rank) std::cout << "============== Simulation Converged ==============" << std::endl;
           break;
         }
+        if (!_context.global_rank) std::cout << "ΔE = " << std::abs(diff) << std::endl;
         t.start("Dyson");
         _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
