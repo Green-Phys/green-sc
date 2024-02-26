@@ -129,7 +129,7 @@ TEST_CASE("Self-consistency") {
     auto        p        = green::params::params("DESCR");
     std::string res_file = random_name();
     // std::string input_file = TEST_PATH + "/test.h5"s;
-    std::string args     = "test --restart 0 --itermax 100 --E_thr 1e-13 --results_file=" + res_file;
+    std::string args     = "test --restart 0 --mixing_type NO_MIXING --itermax 100 --E_thr 1e-13 --results_file=" + res_file;
     green::sc::define_parameters(p);
     p.define<double>("alpha", "", 0.45);
     p.define<double>("beta", "", 0.5);
