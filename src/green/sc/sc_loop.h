@@ -147,6 +147,8 @@ namespace green::sc {
       internal::write(g_tau, "iter" + std::to_string(iter) + "/G_tau/data", ar);
       ar.close();
     }
+
+    DysonSolver& dyson_solver() {return _dyson_solver;}
   };
 }  // namespace green::sc
 
