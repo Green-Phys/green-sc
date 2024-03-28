@@ -35,7 +35,7 @@ namespace green::opt {
     vec_t _vec;
 
   public:
-    explicit shared_optimization_problem(vec_t& vec) : _vec(vec) {}
+    explicit                   shared_optimization_problem(vec_t& vec) : _vec(vec) {}
 
     vec_t&                     x() { return _vec; }
     [[nodiscard]] const vec_t& x() const { return _vec; }

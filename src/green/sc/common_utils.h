@@ -63,7 +63,7 @@ namespace green::sc::internal {
   }
 
   template <typename T, size_t N>
-  utils::shared_object<tensor<T, N>>& operator+=(utils::shared_object<tensor<T, N>>&  lhs,
+  utils::shared_object<tensor<T, N>>& operator+=(utils::shared_object<tensor<T, N>>&       lhs,
                                                  const utils::shared_object<tensor<T, N>>& rhs) {
     lhs.fence();
     if (!utils::context.node_rank) lhs.object() += rhs.object();
@@ -184,14 +184,14 @@ namespace green::sc::internal {
     ar[path] >> v;
   }
 
-  template<size_t N>
-  void read(utils::shared_object<ztensor<N>>& v,const std::string& path, h5pp::archive& ar) {
+  template <size_t N>
+  void read(utils::shared_object<ztensor<N>>& v, const std::string& path, h5pp::archive& ar) {
     v.fence();
-    if(!utils::context.node_rank)ar[path] >> v.object();
+    if (!utils::context.node_rank) ar[path] >> v.object();
     v.fence();
   }
 
-  template<size_t N>
+  template <size_t N>
   void read(ztensor<N>& v, const std::string& path, h5pp::archive& ar) {
     ar[path] >> v;
   }
