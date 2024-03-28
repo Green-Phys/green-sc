@@ -35,25 +35,25 @@ namespace green::sc {
     using St = typename DysonSolver::Sigma_tau;
 
     // maximum number of iterations
-    size_t                     _itermax;
+    size_t _itermax;
     // current iteration
-    size_t                     _iter;
+    size_t _iter;
     // convergence criteria
-    double                     _e_thr;
+    double _e_thr;
     // convergence criteria for single precision
-    double                     _e_thr_sp;
+    double _e_thr_sp;
     // path to inital solution in k-space
-    std::string                _input_path;
+    std::string _input_path;
     // path to the results file
-    std::string                _results_file;
+    std::string _results_file;
     // Restart calculation from existing Self-energy
-    bool                       _restart;
+    bool _restart;
     // Dyson Equation solver
-    DysonSolver                _dyson_solver;
+    DysonSolver _dyson_solver;
     // DIIS or simple damping object
     mixing_strategy<G, S1, St> _mix;
     // MPI
-    utils::mpi_context         _context;
+    utils::mpi_context _context;
 
   public:
     sc_loop(MPI_Comm comm, params::params& p) :
@@ -66,16 +66,14 @@ namespace green::sc {
      * Solve iterative self-consistency equation
      *
      * @tparam Solver - type of diagrammatic solver
-     * @tparam G - type of the Green's function
-     * @tparam S1 - type of the static part of the Self-energy
-     * @tparam St - type of the dynamical part of the Self-energy
-     * @param solver -
+     * @param solver - diagrammatic solver
+     * @param ovlp  - [IN] overlap matrix for the problem
      * @param g0_tau - [IN] starting guess for the Green's function, [OUT] resulting Green's function
      * @param sigma1 - [OUT] static part of the Self-energy
      * @param sigma_tau - [OUT] dynamic part of the Self-energy
      */
     template <typename Solver>
-    void solve(Solver& solver, G& g0_tau, S1& sigma1, St& sigma_tau) {
+    void solve(Solver& solver, const S1& h0, const S1& ovlp, G& g0_tau, S1& sigma1, St& sigma_tau) {
       size_t         start_iter = 0, iter = 0;
       utils::timing& t = utils::timing::get_instance();
       t.start("Read results");
@@ -103,7 +101,7 @@ namespace green::sc {
         solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
         t.start("Iteration mixing");
-        _mix.update(_iter, g0_tau, sigma1, sigma_tau);
+        _mix.update(_iter, _dyson_solver.mu(), h0, ovlp, g0_tau, sigma1, sigma_tau);
         t.end();
         t.start("Check convergence");
         double diff = _dyson_solver.diff(g0_tau, sigma1, sigma_tau);

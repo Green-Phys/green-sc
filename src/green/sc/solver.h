@@ -14,7 +14,6 @@ namespace green::sc {
   public:
     template <typename G, typename S1, typename St>
     void solve(G& g_tau, S1& sigma1, St& sigma_tau) {
-      return;
     }
   };
 
@@ -31,7 +30,6 @@ namespace green::sc {
     template <typename G, typename S1, typename St>
     void solve(G& g_tau, S1& sigma1, St& sigma_tau) {
       std::apply([&](auto&... solvers) { (solvers.solve(g_tau, sigma1, sigma_tau), ...); }, _solvers);
-      return;
     }
 
   private:

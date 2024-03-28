@@ -11,6 +11,7 @@
 #include <green/utils/mpi_shared.h>
 
 namespace green::sc::internal {
+
   template <typename T>
   class is_default_constructible {
     typedef char yes;
@@ -35,7 +36,7 @@ namespace green::sc::internal {
   void cleanup_data(T& old) {}
 
   template <typename T>
-  std::enable_if_t<is_default_constructible_v<T>, T> init_data(T&) {
+  std::enable_if_t<is_default_constructible_v<T>, T> init_data(const T&) {
     T tmp;
     return tmp;
   }
@@ -53,10 +54,98 @@ namespace green::sc::internal {
     old += tmp * damping;
   }
 
+  template <typename T, size_t N, typename C>
+  utils::shared_object<tensor<T, N>>& operator*=(utils::shared_object<tensor<T, N>>& lhs, C rhs) {
+    lhs.fence();
+    if (!utils::context.node_rank) lhs.object() *= rhs;
+    lhs.fence();
+    return lhs;
+  }
+
   template <typename T, size_t N>
-  utils::shared_object<tensor<T, N>> init_data(utils::shared_object<tensor<T, N>>& g) {
-    tensor<T, N> tmp(nullptr, g.object().shape());
-    return utils::shared_object(tmp);
+  utils::shared_object<tensor<T, N>>& operator+=(utils::shared_object<tensor<T, N>>&  lhs,
+                                                 const utils::shared_object<tensor<T, N>>& rhs) {
+    lhs.fence();
+    if (!utils::context.node_rank) lhs.object() += rhs.object();
+    lhs.fence();
+    return lhs;
+  }
+
+  template <typename T, size_t N>
+  utils::shared_object<tensor<T, N>> init_data(const utils::shared_object<tensor<T, N>>& g) {
+    return utils::shared_object<tensor<T, N>>(g.object().shape());
+  }
+
+  template <typename T, size_t N>
+  tensor<T, N> init_data(const tensor<T, N>& g) {
+    return tensor<T, N>(g.shape());
+  }
+
+  template <typename T>
+  std::enable_if_t<h5pp::is_scalar<T>, T*> get_ref(T& tmp) {
+    return &tmp;
+  }
+
+  template <size_t N>
+  std::complex<double>* get_ref(ztensor<N>& tmp) {
+    return tmp.data();
+  }
+
+  template <typename T>
+  std::enable_if_t<h5pp::is_scalar<T>, void> assign(T& lhs, const T& rhs) {
+    lhs = rhs;
+  }
+
+  template <size_t N>
+  void assign(ztensor<N>& lhs, const ztensor<N>& rhs) {
+    lhs << rhs;
+  }
+
+  template <typename T, size_t N>
+  void assign(utils::shared_object<tensor<T, N>>& lhs, const utils::shared_object<tensor<T, N>>& rhs) {
+    lhs.fence();
+    if (!utils::context.node_rank) lhs.object() << rhs.object();
+    lhs.fence();
+  }
+
+  template <typename T>
+  std::enable_if_t<h5pp::is_scalar<T>, void> set_zero(T& lhs) {
+    lhs = T(0);
+  }
+
+  template <size_t N>
+  void set_zero(ztensor<N>& lhs) {
+    lhs.set_zero();
+  }
+  template <typename T, size_t N>
+  void set_zero(utils::shared_object<tensor<T, N>>& lhs) {
+    lhs.fence();
+    if (!utils::context.node_rank) lhs.object().set_zero();
+    lhs.fence();
+  }
+
+  template <typename T>
+  std::enable_if_t<h5pp::is_scalar<T>, std::complex<double>> overlap(const T& vec_v, const T& vec_u) {
+    return vec_v * vec_u;
+  }
+
+  template <size_t N>
+  std::complex<double> overlap(const ztensor<N>& vec_v, const ztensor<N>& vec_u) {
+    using CMcolumn = Eigen::Map<const Eigen::Matrix<std::complex<double>, Eigen::Dynamic, 1, Eigen::ColMajor>>;
+    CMcolumn MFVec_v(vec_v.data(), vec_v.size());
+    CMcolumn MFVec_u(vec_u.data(), vec_u.size());
+
+    // TODO: think whether a rescaling of Sigma is needed...
+    return MFVec_v.dot(MFVec_u);
+  }
+  template <typename T, size_t N>
+  std::complex<double> overlap(const utils::shared_object<tensor<T, N>>& vec_v, const utils::shared_object<tensor<T, N>>& vec_u) {
+    using CMcolumn = Eigen::Map<const Eigen::Matrix<std::complex<double>, Eigen::Dynamic, 1, Eigen::ColMajor>>;
+    CMcolumn MFVec_v(vec_v.object().data(), vec_v.size());
+    CMcolumn MFVec_u(vec_u.object().data(), vec_u.size());
+
+    // TODO: think whether a rescaling of Sigma is needed...
+    return MFVec_v.dot(MFVec_u);
   }
 
   template <typename T>
@@ -79,7 +168,7 @@ namespace green::sc::internal {
     old.fence();
   }
 
-  inline void cleanup_data(utils::shared_object<ztensor<5>>& g_tmp) {}
+  inline void cleanup_data(utils::shared_object<ztensor<5>>&) {}
 
   template <typename T>
   void write(const T& v, const std::string& path, h5pp::archive& ar) {
@@ -95,7 +184,17 @@ namespace green::sc::internal {
     ar[path] >> v;
   }
 
-  inline void read(utils::shared_object<ztensor<5>>& v, const std::string& path, h5pp::archive& ar) { ar[path] >> v.object(); }
+  template<size_t N>
+  void read(utils::shared_object<ztensor<N>>& v,const std::string& path, h5pp::archive& ar) {
+    v.fence();
+    if(!utils::context.node_rank)ar[path] >> v.object();
+    v.fence();
+  }
+
+  template<size_t N>
+  void read(ztensor<N>& v, const std::string& path, h5pp::archive& ar) {
+    ar[path] >> v;
+  }
 }  // namespace green::sc::internal
 
 namespace green::sc {

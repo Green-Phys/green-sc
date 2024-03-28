@@ -103,4 +103,4 @@ sc.solve(solver, g, s1, st);
 
 # Acknowledgements
 
-This work is supported by National Science Foundation under the award CSSI-2310582
+This work is supported by National Science Foundation under the award OAC-2310582

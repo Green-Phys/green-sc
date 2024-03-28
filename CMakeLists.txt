@@ -31,6 +31,7 @@ add_green_dependency(green-ndarray)
 add_green_dependency(green-params)
 add_green_dependency(green-symmetry)
 add_green_dependency(green-utils)
+add_green_dependency(green-opt)
 
 add_subdirectory(src)
 

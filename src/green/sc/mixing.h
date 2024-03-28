@@ -1,16 +1,37 @@
 /*
- * Copyright (c) 2023 University of Michigan
+ * Copyright (c) 2024 University of Michigan
  *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the “Software”), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+ * FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 #ifndef SC_MIXING_H
 #define SC_MIXING_H
 
+#include <green/opt/diis_alg.h>
 #include <green/params/params.h>
 #include <green/utils/mpi_shared.h>
+
+#include <memory>
 
 #include "common_defs.h"
 #include "common_utils.h"
 #include "except.h"
+#include "residuals.h"
+#include "vector_space_fock_sigma.h"
 
 using namespace std::string_literals;
 
@@ -31,19 +52,21 @@ namespace green::sc {
      * DIIS and so on.
      *
      * @param iter - current relative iteration
+     * @param mu - chemical potential
+     * @param ovlp - overlap matrix
      * @param g - Green's function for the current iteration
      * @param s1 - static self-energy for the current iteration
      * @param s_t - dynamic self-energy for the current iteration
      */
-    virtual void update(size_t iter, G& g, S1& s1, St& s_t) const = 0;
+    virtual void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) = 0;
 
-    virtual ~base_mixing() {}
+    virtual ~    base_mixing() {}
   };
 
   template <typename G, typename S1, typename St>
   class no_mixing : public base_mixing<G, S1, St> {
   public:
-    void update(size_t iter, G& g, S1& s1, St& s_t) const override{};
+    void update(size_t, double, const S1&, const S1&, G&, S1&, St&) override{};
   };
 
   /**
@@ -60,7 +83,7 @@ namespace green::sc {
         throw sc_incorrect_damping_error("Damping should be in [0,1) interval");
       }
     }
-    void update(size_t iter, G& g, S1& s1, St& s_t) const override {
+    void update(size_t iter, double, const S1&, const S1&, G& g, S1&, St&) override {
       if (iter == 0) {
         return;
       }
@@ -83,7 +106,7 @@ namespace green::sc {
         throw sc_incorrect_damping_error("Damping should be in [0,1) interval");
       }
     }
-    void update(size_t iter, G& g, S1& s1, St& s_t) const override {
+    void update(size_t iter, double, const S1&, const S1&, G&, S1& s1, St& s_t) override {
       if (iter == 0) {
         return;
       }
@@ -103,6 +126,75 @@ namespace green::sc {
   };
 
   /**
+   *
+   * @tparam G
+   * @tparam S1
+   * @tparam St
+   */
+  template <typename G, typename S1, typename St>
+  class diis : public sigma_damping<G, S1, St> {
+    using vec_t       = opt::FockSigma<S1, St>;
+    using problem_t   = opt::shared_optimization_problem<vec_t>;
+    using vec_space_t = opt::VSpaceFockSigma<S1, St>;
+    using residual_t  = std::function<void(vec_space_t&, problem_t&, vec_t&)>;
+
+  public:
+    diis(const params::params& p, bool commutator) :
+        sigma_damping<G, S1, St>(p["damping"], p["results_file"]), _damping(p["damping"]), _results_file(p["results_file"]),
+        _diis_file(p["diis_file"]), _diis_start(p["diis_start"]), _diis_size(p["diis_size"]), _x_vsp(_diis_file),
+        _res_vsp(_diis_file, "residuals"), _ft(p), _commutator(commutator) {}
+
+    void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) override {
+      vec_t vec(s1, s_t);
+      vec_t res(s1, s_t);
+      auto  vec_i = std::make_shared<vec_t>(s1, s_t);
+      auto  vec_j = std::make_shared<vec_t>(s1, s_t);
+      auto  res_i = std::make_shared<vec_t>(s1, s_t);
+      auto  res_j = std::make_shared<vec_t>(s1, s_t);
+      _x_vsp.init(vec_i, vec_j);
+      _res_vsp.init(res_i, res_j);
+      problem_t  problem(vec);
+      residual_t residual;
+      if (_commutator) {
+        residual = [this, &g, &mu, &h0, &ovlp, &s1, &s_t](vec_space_t&, problem_t& problem, vec_t& res) {
+          vec_t& x_last = problem.x();
+          G      C_t(internal::init_data(g));
+          S1     Fz = x_last.get_fock();
+          internal::set_zero(Fz);
+          res.set_fock_sigma(Fz, C_t);
+          opt::commutator_t(_ft, C_t, g, x_last, mu, h0, ovlp);
+        };
+      } else {
+        residual = [this, &s1, &s_t](vec_space_t& x_vsp, problem_t& problem, vec_t& res) {
+          const vec_t& last = x_vsp.get(x_vsp.size() - 1);
+          add(res, problem.x(), last, -1.0);
+        };
+      }
+      if (iter == 0) {
+        _diis.next_step(vec, res, _x_vsp, _res_vsp, residual, problem);
+        return;
+      }
+      if (iter <= _diis_start) {
+        sigma_damping<G, S1, St>::update(iter, mu, h0, ovlp, g, s1, s_t);
+      }
+      _diis.next_step(vec, res, _x_vsp, _res_vsp, residual, problem);
+    };
+
+  private:
+    double               _damping;
+    std::string          _results_file;
+    std::string          _diis_file;
+    size_t               _diis_start;
+    size_t               _diis_size;
+    opt::diis_alg<vec_t> _diis;
+    vec_space_t          _x_vsp;
+    vec_space_t          _res_vsp;
+    grids::transformer_t _ft;
+    bool                 _commutator;
+    residual_t           _residual;
+  };
+
+  /**
    * Class that decides what type of iteration mixing should be performed based on selected parameters
    *
    * @tparam G - type of the Green's function obejct
@@ -112,7 +204,7 @@ namespace green::sc {
   template <typename G, typename S1, typename St>
   class mixing_strategy {
   public:
-    mixing_strategy(const params::params& p) {
+    explicit mixing_strategy(const params::params& p) {
       switch (mixing_type E = p["mixing_type"]) {
         case NO_MIXING:
           _mixing = std::make_unique<no_mixing<G, S1, St>>();
@@ -123,8 +215,15 @@ namespace green::sc {
         case SIGMA_DAMPING:
           _mixing = std::make_unique<sigma_damping<G, S1, St>>(p["damping"], p["results_file"]);
           break;
+        case DIIS:
+          _mixing = std::make_unique<diis<G, S1, St>>(p, false);
+          break;
+        case CDIIS:
+          _mixing = std::make_unique<diis<G, S1, St>>(p, true);
+          break;
         default:
-          throw sc_unknown_mixing_error("Mixing " + std::string(magic_enum::enum_name(E)) + " has not yet been implemented");
+          _mixing = std::make_unique<no_mixing<G, S1, St>>();
+          break;
       }
     }
 
@@ -132,11 +231,16 @@ namespace green::sc {
      * Based on the chosen strategy mix result from current iteration with results from previous iterations.
      * @param iter
      * @param iter - current relative iteration
+     * @param mu - chemical potential
+     * @param h0 - non-interacting hamiltonian
+     * @param ovlp - overlap matrix
      * @param g - Green's function for the current iteration
      * @param s1 - static self-energy for the current iteration
      * @param s_t - dynamic self-energy for the current iteration
      */
-    void update(size_t iter, G& g, S1& s1, St& s_t) const { _mixing.get()->update(iter, g, s1, s_t); }
+    void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) const {
+      _mixing->update(iter, mu, h0, ovlp, g, s1, s_t);
+    }
 
   private:
     std::unique_ptr<base_mixing<G, S1, St>> _mixing;
