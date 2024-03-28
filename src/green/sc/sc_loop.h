@@ -148,7 +148,7 @@ namespace green::sc {
       ar.close();
     }
 
-    DysonSolver& dyson_solver() {return _dyson_solver;}
+    DysonSolver& dyson_solver() { return _dyson_solver; }
   };
 }  // namespace green::sc
 

@@ -25,6 +25,8 @@ jobs:
           make -j 4;
 
       - name: Test
+        env:
+          OMP_NUM_THREADS: 1
         run: |
           module load BuildEnv/gcc-12.2.0.lua;
           cd build;

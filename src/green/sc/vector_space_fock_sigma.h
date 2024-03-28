@@ -270,7 +270,6 @@ namespace green::opt {
         vsp_ar.move("vec" + std::to_string(j), "vec" + std::to_string(j - 1));
       }
       vsp_ar.close();
-
       _m_size--;
     }
 
