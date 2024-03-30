@@ -151,8 +151,6 @@ namespace green::opt {
    *  addition to the vector space, removal from the vector space,
    *  evaluation of Euclidian overlaps (without any affine metrics/preconditioners),
    *  evaluation of a linear combination of vectors.
-   *
-   *  TODO: MPI parallelization; "move" operation can be done MUCH more efficiently with HDF5.
    */
   template <typename S1, typename St>
   class VSpaceFockSigma {
