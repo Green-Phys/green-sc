@@ -103,14 +103,14 @@ namespace green::opt {
       ft.tau_to_omega(G_t_slice, G_w, 1);
       for (size_t iw = 0; iw < nw; iw++) {
         // Take nao x nao matrices at certain omega, spin, and k-point
-        std::complex<double> muomega = ft.omega(ft.sd().repn_fermi().wsample()(iw), 1) + mu;
-        CMMatrixXcd          MO(S.data() + isk * nao * nao, nao, nao);
-        CMMatrixXcd          MH(H0.data() + isk * nao * nao, nao, nao);
-        MMatrixXcd           MI(I.data(), nao, nao);
-        MMatrixXcd           MC(C_w.data() + iw * nao * nao, nao, nao);
-        MMatrixXcd           MF(S1.data() + isk * nao * nao, nao, nao);
-        MMatrixXcd           MS(Sigma_w.data() + iw * nao * nao, nao, nao);
-        MMatrixXcd           MG(G_w.data() + iw * nao * nao, nao, nao);
+        auto        muomega = ft.wsample_fermi()(iw) * 1.0i + mu;
+        CMMatrixXcd MO(S.data() + isk * nao * nao, nao, nao);
+        CMMatrixXcd MH(H0.data() + isk * nao * nao, nao, nao);
+        MMatrixXcd  MI(I.data(), nao, nao);
+        MMatrixXcd  MC(C_w.data() + iw * nao * nao, nao, nao);
+        MMatrixXcd  MF(S1.data() + isk * nao * nao, nao, nao);
+        MMatrixXcd  MS(Sigma_w.data() + iw * nao * nao, nao, nao);
+        MMatrixXcd  MG(G_w.data() + iw * nao * nao, nao, nao);
         MI = muomega * MO - MH - MF - MS;
         MC = MG * MI - MI * MG;
       }

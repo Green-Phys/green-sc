@@ -50,8 +50,8 @@ namespace green::sc::internal {
 
   template <typename T>
   void update(T& old, T& tmp, double damping) {
-    old *= (1.0 - damping);
-    old += tmp * damping;
+    old *= damping;
+    old += tmp * (1.0 - damping);
   }
 
   template <typename T, size_t N, typename C>

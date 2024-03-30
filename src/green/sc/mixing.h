@@ -142,7 +142,7 @@ namespace green::sc {
     diis(const params::params& p, bool commutator) :
         sigma_damping<G, S1, St>(p["damping"], p["results_file"]), _damping(p["damping"]), _results_file(p["results_file"]),
         _diis_file(p["diis_file"]), _diis_start(p["diis_start"]), _diis_size(p["diis_size"]), _diis(_diis_start, _diis_size),
-        _x_vsp(_diis_file), _res_vsp(_diis_file, "residuals"), _ft(p), _commutator(commutator) {}
+        _x_vsp(_diis_file, _diis_size), _res_vsp(_diis_file, _diis_size-1, "residuals"), _ft(p), _commutator(commutator) {}
 
     void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) override {
       vec_t vec(s1, s_t);
@@ -159,10 +159,10 @@ namespace green::sc {
         residual = [this, &g, &mu, &h0, &ovlp, &s1, &s_t](vec_space_t&, problem_t& problem, vec_t& res) {
           vec_t& x_last = problem.x();
           G      C_t(internal::init_data(g));
-          S1     Fz = x_last.get_fock();
+          S1     Fz(internal::init_data(s1));
+          opt::commutator_t(_ft, C_t, g, x_last, mu, h0, ovlp);
           internal::set_zero(Fz);
           res.set_fock_sigma(Fz, C_t);
-          opt::commutator_t(_ft, C_t, g, x_last, mu, h0, ovlp);
         };
       } else {
         residual = [this, &s1, &s_t](vec_space_t& x_vsp, problem_t& problem, vec_t& res) {
@@ -176,8 +176,14 @@ namespace green::sc {
       }
       if (iter <= _diis_start) {
         sigma_damping<G, S1, St>::update(iter, mu, h0, ovlp, g, s1, s_t);
+        internal::assign(problem.x().get_fock(), s1);
+        internal::assign(problem.x().get_sigma(), s_t);
       }
       _diis.next_step(vec, res, _x_vsp, _res_vsp, residual, problem);
+      if (iter > _diis_start) {
+        internal::assign(s1, problem.x().get_fock());
+        internal::assign(s_t, problem.x().get_sigma());
+      }
     };
 
   private:
