@@ -404,6 +404,38 @@ TEST_CASE("Mixing") {
     std::filesystem::remove(res_file_1);
     std::filesystem::remove(mix_file_1);
   }
+  SECTION("CDIIS with tensor") {
+    using G                = green::sc::ztensor<5>;
+    using S1               = green::sc::ztensor<4>;
+    using St               = green::sc::ztensor<5>;
+    using mixing_t         = green::sc::mixing_strategy<G, S1, St>;
+    auto        p          = green::params::params("DESCR");
+    std::string res_file_1 = random_name();
+    std::string mix_file_1 = random_name();
+    std::string args_1 =
+        "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=CDIIS --diis_start 1 "s +
+        "--damping 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
+    green::sc::define_parameters(p);
+    green::grids::define_parameters(p);
+    p.parse(args_1);
+    S1       h0(2, 3, 4, 4);
+    S1       ovlp(2, 3, 4, 4);
+    G        g(110, 2, 3, 4, 4);
+    S1       sigma_1(2, 3, 4, 4);
+    St       sigma_t(110, 2, 3, 4, 4);
+    mixing_t mixing(p);
+    mixing.update(0, 0, h0, ovlp, g, sigma_1, sigma_t);
+    green::h5pp::archive ar(res_file_1, "w");
+    ar["iter0/Sigma1"] << sigma_1;
+    ar["iter0/Selfenergy/data"] << sigma_t;
+    ar.close();
+    sigma_1.set_value(0.5);
+    sigma_t.set_value(0.5);
+    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(2, 0, h0, ovlp, g, sigma_1, sigma_t);
+    std::filesystem::remove(res_file_1);
+    std::filesystem::remove(mix_file_1);
+  }
 }
 
 int main(int argc, char** argv) {
