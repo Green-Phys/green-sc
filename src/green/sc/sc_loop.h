@@ -117,7 +117,7 @@ namespace green::sc {
           if (!_context.global_rank) std::cout << "============== Simulation Converged ==============" << std::endl;
           break;
         }
-        if (!_context.global_rank) std::cout << "ΔE = " << std::abs(diff) << std::endl;
+        if (!_context.global_rank) std::cout << std::setw(45) << std::right << "ΔE = " << std::abs(diff) << std::endl;
         t.start("Dyson");
         _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
