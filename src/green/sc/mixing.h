@@ -184,6 +184,9 @@ namespace green::sc {
         internal::assign(s1, problem.x().get_fock());
         internal::assign(s_t, problem.x().get_sigma());
       }
+      // release shared pointer
+      _x_vsp.reset();
+      _res_vsp.reset();
     };
 
   private:

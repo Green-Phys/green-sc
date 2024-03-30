@@ -178,7 +178,7 @@ namespace green::opt {
     void read_from_dbase(const size_t i, FockSigma<S1, St>& res) {
       h5pp::archive vsp_ar(_m_dbase, "r");
       size_t        index = (_index - _m_size + i) % _diis_size;
-      // std::cout << _vecname << "read:" << i << " " << index << " " << _index << " " << _diis_size << std::endl;
+      // compute new cyclic index of HDF5 group to read vector
       sc::internal::read(res.get_fock(), _vecname + "/vec" + std::to_string(index) + "/Fock/data", vsp_ar);
       sc::internal::read(res.get_sigma(), _vecname + "/vec" + std::to_string(index) + "/Selfenergy/data", vsp_ar);
       vsp_ar.close();
@@ -189,8 +189,8 @@ namespace green::opt {
      * **/
     void write_to_dbase(const size_t i, const FockSigma<S1, St>& Vec) {
       h5pp::archive vsp_ar(_m_dbase, "a");
+      // compute new cyclic index of HDF5 group to write new vector
       size_t        index = (((_index) / _diis_size) * _diis_size + i) % _diis_size;
-      // std::cout << _vecname << "write:" << i << " " << index << " " << _index << " " << _diis_size << std::endl;
       sc::internal::write(Vec.get_fock(), _vecname + "/vec" + std::to_string(index) + "/Fock/data", vsp_ar);
       sc::internal::write(Vec.get_sigma(), _vecname + "/vec" + std::to_string(index) + "/Selfenergy/data", vsp_ar);
       vsp_ar.close();
@@ -211,6 +211,8 @@ namespace green::opt {
      * Create Fock-Sigma virtual space with specific database file name
      *
      * @param db database file name
+     * @param diis_size - size of virtual space
+     * @param vecname - name of the HDF5 group in the database file
      */
     explicit VSpaceFockSigma(std::string db, size_t diis_size, std::string vecname = "FockSelfenergy") :
         _m_size(0), _index(0), _diis_size(diis_size), _m_dbase(std::move(db)), _vecname(std::move(vecname)) {}
@@ -236,7 +238,8 @@ namespace green::opt {
     }
 
     void add(const FockSigma<S1, St>& Vec) {
-      write_to_dbase(_index, Vec);
+      if(!utils::context.global_rank) write_to_dbase(_index, Vec);
+      MPI_Barrier(utils::context.global);
       _m_size++;
       _index++;
     }
@@ -264,7 +267,11 @@ namespace green::opt {
 
     [[nodiscard]] size_t size() const { return _m_size; };
 
-    // TODO implement "move" operation in the ALPS
+    /**
+     * In this implementation we don't need to purge data. Old data is cyclically overwritten by a new data
+     *
+     * @param i vector to purge
+     */
     void purge(const size_t i) {
       if (i >= _m_size) {
         throw std::runtime_error("Vector index of the VSpace container is out of bounds");
@@ -272,11 +279,7 @@ namespace green::opt {
       if (_m_size == 0) {
         throw std::runtime_error("VSpace container is of zero size, no vectors can be deleted");
       }
-      // h5pp::archive vsp_ar(_m_dbase, "a");
-      // for (size_t j = i + 1; j < size(); j++) {
-      //   vsp_ar.move(_vecname + "/vec" + std::to_string(j), _vecname + "/vec" + std::to_string(j - 1));
-      // }
-      // vsp_ar.close();
+
       _m_size--;
     }
 
