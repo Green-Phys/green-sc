@@ -113,11 +113,16 @@ namespace green::sc {
           _dyson_solver.dump_iteration(_iter, _results_file);
         }
         t.end();
+        if (!_context.global_rank) {
+          std::stringstream ss;
+          ss << std::scientific << std::setprecision(15);
+          ss << std::setw(36) << std::right << "ΔE = " << std::setw(22) << std::right << std::abs(diff) << std::endl;
+          std::cout << ss.str();
+        }
         if (std::abs(diff) < _e_thr) {
           if (!_context.global_rank) std::cout << "============== Simulation Converged ==============" << std::endl;
           break;
         }
-        if (!_context.global_rank) std::cout << std::setw(45) << std::right << "ΔE = " << std::abs(diff) << std::endl;
         t.start("Dyson");
         _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
