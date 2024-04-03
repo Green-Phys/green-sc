@@ -101,8 +101,8 @@ namespace green::sc {
 
     void print_name() override {
         if (utils::context.global_rank == 0) std::cout << "Green's function mixing strategy will be applied: " 
-                                                       << damping << "*G_old + " 
-                                                       << (1-damping) << "G_new" << std::endl;
+                                                       << _damping << "*G_old + " 
+                                                       << (1-_damping) << "G_new" << std::endl;
     }
 
   private:
@@ -134,8 +134,8 @@ namespace green::sc {
 
     void print_name() override {
         if (utils::context.global_rank == 0) std::cout << "Self-energy mixing strategy will be applied: " 
-                                                       << damping << "*Sigma_old + " 
-                                                       << (1-damping) << "Sigma_new" << std::endl;
+                                                       << _damping << "*Sigma_old + " 
+                                                       << (1-_damping) << "Sigma_new" << std::endl;
     }
 
   private:
@@ -272,6 +272,10 @@ namespace green::sc {
      */
     void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) const {
       _mixing->update(iter, mu, h0, ovlp, g, s1, s_t);
+    }
+
+    void print_name() const {
+      _mixing->print_name();
     }
 
   private:
