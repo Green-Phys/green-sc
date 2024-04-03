@@ -101,6 +101,7 @@ namespace green::sc {
         solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
         t.start("Iteration mixing");
+        _mix.print_name();
         _mix.update(_iter, _dyson_solver.mu(), h0, ovlp, g0_tau, sigma1, sigma_tau);
         t.end();
         t.start("Check convergence");
