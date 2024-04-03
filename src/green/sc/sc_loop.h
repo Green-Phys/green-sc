@@ -94,6 +94,7 @@ namespace green::sc {
       t.end();
       for (_iter = start_iter, iter = 0; iter < _itermax; ++iter, ++_iter) {
         if (!_context.global_rank) {
+          std::cout << std::endl;
           std::cout << "========== Starting iteration " << _iter + 1 << " out of " << _itermax + start_iter
                     << " ==========" << std::endl;
         }
