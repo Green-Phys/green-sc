@@ -60,6 +60,8 @@ namespace green::sc {
      */
     virtual void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) = 0;
 
+    virtual void print_name() = 0;
+
     virtual ~    base_mixing() {}
   };
 
@@ -67,6 +69,10 @@ namespace green::sc {
   class no_mixing : public base_mixing<G, S1, St> {
   public:
     void update(size_t, double, const S1&, const S1&, G&, S1&, St&) override{};
+
+    void print_name() override {
+        if (utils::context.global_rank == 0) std::cout << "No mixing strategy will be applied" << std::endl;
+    }
   };
 
   /**
@@ -92,6 +98,12 @@ namespace green::sc {
       internal::update(g, g_tmp, _damping);
       internal::cleanup_data(g_tmp);
     };
+
+    void print_name() override {
+        if (utils::context.global_rank == 0) std::cout << "Green's function mixing strategy will be applied: " 
+                                                       << _damping << "*G_old + " 
+                                                       << (1-_damping) << "*G_new" << std::endl;
+    }
 
   private:
     double      _damping;
@@ -119,6 +131,12 @@ namespace green::sc {
       internal::update(s1, s1_tmp, _damping);
       internal::cleanup_data(s1_tmp);
     };
+
+    void print_name() override {
+        if (utils::context.global_rank == 0) std::cout << "Self-energy mixing strategy will be applied: " 
+                                                       << _damping << "*Sigma_old + " 
+                                                       << (1-_damping) << "*Sigma_new" << std::endl;
+    }
 
   private:
     double      _damping;
@@ -190,6 +208,10 @@ namespace green::sc {
       _res_vsp.reset();
     };
 
+    void print_name() override {
+        if (utils::context.global_rank == 0) std::cout << "DDIIS/CDIIS mixing strategy will be applied" << std::endl;
+    };
+
   private:
     double               _damping;
     std::string          _results_file;
@@ -250,6 +272,10 @@ namespace green::sc {
      */
     void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) const {
       _mixing->update(iter, mu, h0, ovlp, g, s1, s_t);
+    }
+
+    void print_name() const {
+      _mixing->print_name();
     }
 
   private:
