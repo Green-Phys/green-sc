@@ -94,6 +94,7 @@ namespace green::sc {
       t.end();
       for (_iter = start_iter, iter = 0; iter < _itermax; ++iter, ++_iter) {
         if (!_context.global_rank) {
+          std::cout << std::endl;
           std::cout << "========== Starting iteration " << _iter + 1 << " out of " << _itermax + start_iter
                     << " ==========" << std::endl;
         }
@@ -101,6 +102,7 @@ namespace green::sc {
         solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
         t.start("Iteration mixing");
+        _mix.print_name();
         _mix.update(_iter, _dyson_solver.mu(), h0, ovlp, g0_tau, sigma1, sigma_tau);
         t.end();
         t.start("Check convergence");
@@ -116,7 +118,7 @@ namespace green::sc {
         if (!_context.global_rank) {
           std::stringstream ss;
           ss << std::scientific << std::setprecision(15);
-          ss << std::setw(36) << std::right << "ΔE = " << std::setw(22) << std::right << std::abs(diff) << std::endl;
+          ss << std::setw(36) << std::right << "|ΔE_1b| + |ΔE_HF| + |ΔE_corr| = " << std::setw(22) << std::right << std::abs(diff) << std::endl;
           std::cout << ss.str();
         }
         if (std::abs(diff) < _e_thr) {
