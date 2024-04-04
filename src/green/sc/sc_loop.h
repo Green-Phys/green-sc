@@ -117,7 +117,7 @@ namespace green::sc {
         if (!_context.global_rank) {
           std::stringstream ss;
           ss << std::scientific << std::setprecision(15);
-          ss << std::setw(39) << std::right << "|ΔE_1b| + |ΔE_HF| + |ΔE_corr| = " << std::setw(22) << std::right << std::abs(diff) << std::endl;
+          ss << std::setw(38) << std::right << "|ΔE_1b| + |ΔE_HF| + |ΔE_corr| = " << std::setw(22) << std::right << std::abs(diff) << std::endl;
           std::cout << ss.str();
         }
         if (std::abs(diff) < _e_thr) {
