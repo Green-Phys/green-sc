@@ -150,8 +150,8 @@ namespace green::sc {
       vec_t res(s1, s_t);
       auto  vec_i = std::make_shared<vec_t>(s1, s_t);
       auto  vec_j = std::make_shared<vec_t>(s1, s_t);
-      auto  res_i = std::make_shared<vec_t>(s1, s_t);
-      auto  res_j = std::make_shared<vec_t>(s1, s_t);
+      auto  res_i = vec_i;
+      auto  res_j = vec_j;
       _x_vsp.init(vec_i, vec_j);
       _res_vsp.init(res_i, res_j);
       problem_t  problem(vec);
