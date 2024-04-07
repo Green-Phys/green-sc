@@ -156,7 +156,8 @@ namespace green::opt {
   class VSpaceFockSigma {
   private:
     size_t                           _m_size;
-    size_t                           _index;
+    size_t                           _index; // Counter of all vectors coming to the vector space. 
+                                             // Used only for cyclic operations
     size_t                           _diis_size;
     std::string                      _m_dbase;  // Name of the file where the vectors will be saved
     std::string                      _vecname;  // Name of the vector to be saved
@@ -173,7 +174,11 @@ namespace green::opt {
       return obj;
     }
 
-    void read_from_dbase(const size_t i, FockSigma<S1, St>& res) {
+
+    /** \brief Cyclic implementation: Read vector from position \f[i\f] in the file
+     *  \param i
+     * **/
+    void read_from_dbase_cyclic(const size_t i, FockSigma<S1, St>& res) {
       h5pp::archive vsp_ar(_m_dbase, "r");
       size_t        index = (_index - _m_size + i) % _diis_size;
       // compute new cyclic index of HDF5 group to read vector
@@ -181,16 +186,40 @@ namespace green::opt {
       sc::internal::read(res.get_sigma(), _vecname + "/vec" + std::to_string(index) + "/Selfenergy/data", vsp_ar);
       vsp_ar.close();
     }
-
-    /** \brief Write vector to position \f[i\f] in the file
+    /** \brief Read vector from position \f[i\f] in the file
      *  \param i
      * **/
-    void write_to_dbase(const size_t i, const FockSigma<S1, St>& Vec) {
+    void read_from_dbase(const size_t i, FockSigma<S1, St>& res) {
+      h5pp::archive vsp_ar(_m_dbase, "r");
+      sc::internal::read(res.get_fock(), _vecname + "/vec" + std::to_string(i) + "/Fock/data", vsp_ar);
+      sc::internal::read(res.get_sigma(), _vecname + "/vec" + std::to_string(i) + "/Selfenergy/data", vsp_ar);
+      vsp_ar.close();
+    }
+
+    /** \brief Cyclic implementation: Write vector to position \f[i\f] in the file
+     *  \param i
+     * **/
+    void write_to_dbase_cyclic(const size_t i, const FockSigma<S1, St>& Vec) {
       h5pp::archive vsp_ar(_m_dbase, "a");
       // compute new cyclic index of HDF5 group to write new vector
-      size_t        index = (((_index) / _diis_size) * _diis_size + i) % _diis_size;
+      size_t        index =  i % _diis_size;
       sc::internal::write(Vec.get_fock(), _vecname + "/vec" + std::to_string(index) + "/Fock/data", vsp_ar);
       sc::internal::write(Vec.get_sigma(), _vecname + "/vec" + std::to_string(index) + "/Selfenergy/data", vsp_ar);
+      vsp_ar.close();
+    }
+    /** \brief (Over)write garbage place and move it to the last vector position
+     *  \param i
+     * **/
+    void write_to_dbase(const FockSigma<S1, St>& Vec) {
+      h5pp::archive vsp_ar(_m_dbase, "a");
+      // Overwrite garbage
+      sc::internal::write(Vec.get_fock(), _vecname + "/garbage" + "/Fock/data", vsp_ar);
+      sc::internal::write(Vec.get_sigma(), _vecname + "/garbage" + "/Selfenergy/data", vsp_ar);
+      // Move the link to the last position
+      std::string p = "/" + _vecname;
+      std::string dst = p + "/vec" + std::to_string(_m_size);
+      std::string src = p + "/garbage";
+      vsp_ar[p].move(src, dst); // will throw if dst exists
       vsp_ar.close();
     }
 
@@ -235,11 +264,22 @@ namespace green::opt {
       return read_from_dbase(i, r);
     }
 
-    void add(const FockSigma<S1, St>& Vec) {
-      if(!utils::context.global_rank) write_to_dbase(_index, Vec);
+    /** \brief Cyclic implementation: add vector to the subspace cyclicly overwriting data
+     *  \param i
+     * **/
+    void add_cyclic(const FockSigma<S1, St>& Vec) {
+      if(!utils::context.global_rank) write_to_dbase_cyclic(_index, Vec);
       MPI_Barrier(utils::context.global);
       _m_size++;
       _index++;
+    }
+    /** \brief Add vector to the subspace overwriting garbage
+     *  \param i
+     * **/
+    void add(const FockSigma<S1, St>& Vec) {
+      if(!utils::context.global_rank) write_to_dbase(Vec);
+      MPI_Barrier(utils::context.global);
+      _m_size++;
     }
 
     [[nodiscard]] std::complex<double> overlap(const size_t i, const FockSigma<S1, St>& vec_j) {
@@ -266,10 +306,26 @@ namespace green::opt {
     [[nodiscard]] size_t size() const { return _m_size; };
 
     /**
+     * Cyclic version:
      * In this implementation we don't need to purge data. Old data is cyclically overwritten by a new data
      *
      * @param i vector to purge
      */
+    void purge_cyclic(const size_t i) {
+      if (i >= _m_size) {
+        throw std::runtime_error("Vector index of the VSpace container is out of bounds");
+      }
+      if (_m_size == 0) {
+        throw std::runtime_error("VSpace container is of zero size, no vectors can be deleted");
+      }
+
+      _m_size--;
+    }
+
+    /** \brief Move the link of vector i to garbage and shift all other links
+     *         No physical data is moved.
+     *  \param i
+     * **/
     void purge(const size_t i) {
       if (i >= _m_size) {
         throw std::runtime_error("Vector index of the VSpace container is out of bounds");
@@ -277,6 +333,20 @@ namespace green::opt {
       if (_m_size == 0) {
         throw std::runtime_error("VSpace container is of zero size, no vectors can be deleted");
       }
+      if(!utils::context.global_rank) {
+          h5pp::archive vsp_ar(_m_dbase, "a");
+          std::string p = "/" + _vecname;
+          std::string src = p + "/vec" + std::to_string(i);
+          std::string dst = p + "/garbage";
+          vsp_ar[p].move(src, dst);
+          for(size_t j = i+1; j < _m_size; j++) {
+              src = p + "/vec" + std::to_string(j);
+              dst = p + "/vec" + std::to_string(j-1);
+              vsp_ar[p].move(src, dst);
+          }
+          vsp_ar.close();
+      }
+      MPI_Barrier(utils::context.global);
 
       _m_size--;
     }
