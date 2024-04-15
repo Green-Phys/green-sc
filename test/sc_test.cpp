@@ -50,7 +50,7 @@ public:
   using Sigma1    = double;
   using Sigma_tau = double;
 
-       fourth_power_equation_dyson(green::params::params& p) : _alpha(p["alpha"]), _beta(p["beta"]) {}
+  fourth_power_equation_dyson(green::params::params& p) : _alpha(p["alpha"]), _beta(p["beta"]) {}
 
   void solve(G& g, Sigma1& sigma1, Sigma_tau& sigma_tau) {
     double g_new = _alpha + _alpha * (sigma1 + sigma_tau) * g;
@@ -58,7 +58,7 @@ public:
     g            = g_new;
   }
   double diff(const G&, const Sigma1&, const Sigma_tau&) { return _diff; }
-  void   dump_iteration(size_t, const std::string&){};
+  void   dump_iteration(size_t, const std::string&) {};
   double mu() { return 0; }
 
 private:
@@ -73,7 +73,7 @@ public:
   using Sigma1    = double;
   using Sigma_tau = double;
 
-       fourth_power_equation_solver(double alpha, double beta) : _U(std::sqrt(beta / alpha)) {}
+  fourth_power_equation_solver(double alpha, double beta) : _U(std::sqrt(beta / alpha)) {}
 
   void solve(const G& g, Sigma1&, Sigma_tau& sigma_tau) { sigma_tau = _U * g * g * _U * g; }
 
@@ -87,7 +87,7 @@ public:
   using Sigma1    = double;
   using Sigma_tau = double;
 
-       second_power_equation_solver(double alpha, double gamma) : _U(gamma / alpha) {}
+  second_power_equation_solver(double alpha, double gamma) : _U(gamma / alpha) {}
 
   void solve(const G& g, Sigma1& sigma1, Sigma_tau&) { sigma1 = _U * g; }
 
@@ -436,6 +436,67 @@ TEST_CASE("Mixing") {
     std::filesystem::remove(res_file_1);
     std::filesystem::remove(mix_file_1);
   }
+}
+
+TEST_CASE("FockSigmaVectorSpace") {
+  using S1          = green::sc::ztensor<4>;
+  using St          = green::utils::shared_object<green::sc::ztensor<5>>;
+  using vec_t       = green::opt::FockSigma<S1, St>;
+  using problem_t   = green::opt::shared_optimization_problem<vec_t>;
+  using vec_space_t = green::opt::VSpaceFockSigma<S1, St>;
+
+  S1 s1_0(1, 2, 3, 3);
+  St s_t_0(10, 1, 2, 3, 3);
+
+  S1 s1(1, 2, 3, 3);
+  St s_t(10, 1, 2, 3, 3);
+
+  s1.set_value(1);
+  s1_0 << s1;
+  s_t.fence();
+  if (!green::utils::context.global_rank) s_t.object().set_value(0);
+  s_t.fence();
+  s_t_0.fence();
+  if (!green::utils::context.global_rank) s_t_0.object().set_value(0);
+  s_t_0.fence();
+
+  std::string diis_file = random_name();
+  size_t      diis_size = 5;
+  vec_space_t x_vsp(diis_file, diis_size);
+  vec_t       vec(s1, s_t);
+  auto        vec_i = std::make_shared<vec_t>(s1, s_t);
+  auto        vec_j = std::make_shared<vec_t>(s1, s_t);
+  x_vsp.init(vec_i, vec_j);
+  SECTION("Check empty") {
+    REQUIRE_THROWS_AS(x_vsp.get(0), green::sc::sc_diis_vsp_error);
+    REQUIRE_THROWS_AS(x_vsp.get(0, *vec_i.get()), green::sc::sc_diis_vsp_error);
+    REQUIRE_THROWS_AS(x_vsp.purge(0), green::sc::sc_diis_vsp_error);
+  }
+  for (int i = 0; i < 10; ++i) {
+    if (i >= diis_size) x_vsp.purge();
+    x_vsp.add(vec);
+    REQUIRE(x_vsp.size() == ((i < diis_size) ? i + 1 : diis_size));
+    auto& tmp  = x_vsp.get(0);
+    auto& fock = tmp.get_fock();
+    if (i < diis_size)
+      REQUIRE(std::equal(fock.begin(), fock.end(), s1_0.begin(),
+                         [](const std::complex<double>& x, const std::complex<double>& y) { return std::abs(x - y) < 1e-10; }));
+    if (i >= diis_size)
+      REQUIRE(
+          std::equal(fock.begin(), fock.end(), s1_0.begin(), [&](const std::complex<double>& x, const std::complex<double>& y) {
+            return std::abs(x - y - std::complex<double>(i + 1 - diis_size)) < 1e-10;
+          }));
+    vec.get_fock() << (s1_0 + i + 1);
+    if (i < diis_size) {
+      REQUIRE(std::abs(x_vsp.overlap(i, 0) - double(s1_0.size() * (i + 1))) < 1e-12);
+    }
+  }
+  SECTION("Check outside the boundary") {
+    REQUIRE_THROWS_AS(x_vsp.get(diis_size), green::sc::sc_diis_vsp_error);
+    REQUIRE_THROWS_AS(x_vsp.purge(diis_size), green::sc::sc_diis_vsp_error);
+  }
+  x_vsp.reset();
+  std::filesystem::remove(diis_file);
 }
 
 int main(int argc, char** argv) {

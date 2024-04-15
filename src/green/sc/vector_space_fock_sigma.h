@@ -33,6 +33,7 @@
 
 #include "common_defs.h"
 #include "common_utils.h"
+#include "except.h"
 
 namespace green::opt {
 
@@ -188,7 +189,7 @@ namespace green::opt {
     void write_to_dbase(const size_t i, const FockSigma<S1, St>& Vec) {
       h5pp::archive vsp_ar(_m_dbase, "a");
       // compute new cyclic index of HDF5 group to write new vector
-      size_t        index = (((_index) / _diis_size) * _diis_size + i) % _diis_size;
+      size_t index = (((_index) / _diis_size) * _diis_size + i) % _diis_size;
       sc::internal::write(Vec.get_fock(), _vecname + "/vec" + std::to_string(index) + "/Fock/data", vsp_ar);
       sc::internal::write(Vec.get_sigma(), _vecname + "/vec" + std::to_string(index) + "/Selfenergy/data", vsp_ar);
       vsp_ar.close();
@@ -223,20 +224,20 @@ namespace green::opt {
      */
     const FockSigma<S1, St>& get(size_t i) {
       if (i >= _m_size) {
-        throw std::runtime_error("Vector index of the VSpace container is out of bounds");
+        throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
       }
       return read_from_dbase(i);
     }
 
     void get(size_t i, FockSigma<S1, St>& r) {
       if (i >= _m_size) {
-        throw std::runtime_error("Vector index of the VSpace container is out of bounds");
+        throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
       }
       return read_from_dbase(i, r);
     }
 
     void add(const FockSigma<S1, St>& Vec) {
-      if(!utils::context.global_rank) write_to_dbase(_index, Vec);
+      if (!utils::context.global_rank) write_to_dbase(_index, Vec);
       MPI_Barrier(utils::context.global);
       _m_size++;
       _index++;
@@ -268,16 +269,15 @@ namespace green::opt {
     /**
      * In this implementation we don't need to purge data. Old data is cyclically overwritten by a new data
      *
-     * @param i vector to purge
+     * @param i vector to purge, for cyclic vector space should always be 0
      */
-    void purge(const size_t i) {
+    void purge(const size_t i = 0) {
       if (i >= _m_size) {
-        throw std::runtime_error("Vector index of the VSpace container is out of bounds");
+        throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
       }
       if (_m_size == 0) {
-        throw std::runtime_error("VSpace container is of zero size, no vectors can be deleted");
+        throw sc::sc_diis_vsp_error("VSpace container is of zero size, no vectors can be deleted");
       }
-
       _m_size--;
     }
 
