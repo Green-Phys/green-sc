@@ -216,11 +216,11 @@ namespace green::opt {
      * @param i - index of a vector to be purged
      */
     void purge(const size_t i = 0) {
-      if (i >= _m_size) {
-        throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
-      }
       if (_m_size == 0) {
         throw sc::sc_diis_vsp_error("VSpace container is of zero size, no vectors can be deleted");
+      }
+      if (i >= _m_size) {
+        throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
       }
       if (!utils::context.global_rank) {
         h5pp::archive vsp_ar(_m_dbase, "a");
