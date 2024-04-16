@@ -33,6 +33,7 @@
 
 #include "common_defs.h"
 #include "common_utils.h"
+#include "except.h"
 
 namespace green::opt {
 
@@ -156,7 +157,7 @@ namespace green::opt {
   class VSpaceFockSigma {
   private:
     size_t                           _m_size;
-    size_t                           _index; // Counter of all vectors coming to the vector space. 
+    size_t                           _index; // Counter of all vectors coming to the vector space.
                                              // Used only for cyclic operations
     size_t                           _diis_size;
     std::string                      _m_dbase;  // Name of the file where the vectors will be saved
@@ -252,14 +253,14 @@ namespace green::opt {
      */
     const FockSigma<S1, St>& get(size_t i) {
       if (i >= _m_size) {
-        throw std::runtime_error("Vector index of the VSpace container is out of bounds");
+        throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
       }
       return read_from_dbase(i);
     }
 
     void get(size_t i, FockSigma<S1, St>& r) {
       if (i >= _m_size) {
-        throw std::runtime_error("Vector index of the VSpace container is out of bounds");
+        throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
       }
       return read_from_dbase(i, r);
     }
@@ -309,7 +310,7 @@ namespace green::opt {
      * Cyclic version:
      * In this implementation we don't need to purge data. Old data is cyclically overwritten by a new data
      *
-     * @param i vector to purge
+     * @param i vector to purge, for cyclic vector space should always be 0
      */
     void purge_cyclic(const size_t i) {
       if (i >= _m_size) {
@@ -328,10 +329,10 @@ namespace green::opt {
      * **/
     void purge(const size_t i) {
       if (i >= _m_size) {
-        throw std::runtime_error("Vector index of the VSpace container is out of bounds");
+        throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
       }
       if (_m_size == 0) {
-        throw std::runtime_error("VSpace container is of zero size, no vectors can be deleted");
+        throw sc::sc_diis_vsp_error("VSpace container is of zero size, no vectors can be deleted");
       }
       if(!utils::context.global_rank) {
           h5pp::archive vsp_ar(_m_dbase, "a");

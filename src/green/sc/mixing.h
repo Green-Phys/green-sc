@@ -60,18 +60,18 @@ namespace green::sc {
      */
     virtual void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) = 0;
 
-    virtual void print_name() = 0;
+    virtual void print_name()                                                                        = 0;
 
-    virtual ~    base_mixing() {}
+    virtual ~base_mixing() {}
   };
 
   template <typename G, typename S1, typename St>
   class no_mixing : public base_mixing<G, S1, St> {
   public:
-    void update(size_t, double, const S1&, const S1&, G&, S1&, St&) override{};
+    void update(size_t, double, const S1&, const S1&, G&, S1&, St&) override {};
 
     void print_name() override {
-        if (utils::context.global_rank == 0) std::cout << "No mixing strategy will be applied" << std::endl;
+      if (utils::context.global_rank == 0) std::cout << "No mixing strategy will be applied" << std::endl;
     }
   };
 
@@ -85,8 +85,8 @@ namespace green::sc {
   class g_damping : public base_mixing<G, S1, St> {
   public:
     g_damping(double d, const std::string& res) : _damping(d), _results_file(res) {
-      if (d < 0.0 || d >= 1.0) {
-        throw sc_incorrect_damping_error("Damping should be in [0,1) interval");
+      if (d <= 0.0 || d > 1.0) {
+        throw sc_incorrect_damping_error("Damping should be in (0,1] interval");
       }
     }
     void update(size_t iter, double, const S1&, const S1&, G& g, S1&, St&) override {
@@ -100,9 +100,9 @@ namespace green::sc {
     };
 
     void print_name() override {
-        if (utils::context.global_rank == 0) std::cout << "Green's function mixing strategy will be applied: " 
-                                                       << _damping << "*G_old + " 
-                                                       << (1-_damping) << "*G_new" << std::endl;
+      if (utils::context.global_rank == 0)
+        std::cout << "Green's function mixing strategy will be applied: " << _damping << "*G_new + " << (1 - _damping) << "*G_old"
+                  << std::endl;
     }
 
   private:
@@ -114,8 +114,8 @@ namespace green::sc {
   class sigma_damping : public base_mixing<G, S1, St> {
   public:
     sigma_damping(double d, const std::string& res) : _damping(d), _results_file(res) {
-      if (d < 0.0 || d >= 1.0) {
-        throw sc_incorrect_damping_error("Damping should be in [0,1) interval");
+      if (d <= 0.0 || d > 1.0) {
+        throw sc_incorrect_damping_error("Damping should be in (0,1] interval");
       }
     }
     void update(size_t iter, double, const S1&, const S1&, G&, S1& s1, St& s_t) override {
@@ -133,9 +133,9 @@ namespace green::sc {
     };
 
     void print_name() override {
-        if (utils::context.global_rank == 0) std::cout << "Self-energy mixing strategy will be applied: " 
-                                                       << _damping << "*Sigma_old + " 
-                                                       << (1-_damping) << "*Sigma_new" << std::endl;
+      if (utils::context.global_rank == 0)
+        std::cout << "Self-energy mixing strategy will be applied: " << _damping << "*Sigma_new + " << (1 - _damping)
+                  << "*Sigma_old" << std::endl;
     }
 
   private:
@@ -168,8 +168,8 @@ namespace green::sc {
       vec_t res(s1, s_t);
       auto  vec_i = std::make_shared<vec_t>(s1, s_t);
       auto  vec_j = std::make_shared<vec_t>(s1, s_t);
-      auto  res_i = std::make_shared<vec_t>(s1, s_t);
-      auto  res_j = std::make_shared<vec_t>(s1, s_t);
+      auto  res_i = vec_i;
+      auto  res_j = vec_j;
       _x_vsp.init(vec_i, vec_j);
       _res_vsp.init(res_i, res_j);
       problem_t  problem(vec);
@@ -209,7 +209,7 @@ namespace green::sc {
     };
 
     void print_name() override {
-        if (utils::context.global_rank == 0) std::cout << "DDIIS/CDIIS mixing strategy will be applied" << std::endl;
+      if (utils::context.global_rank == 0) std::cout << "DDIIS/CDIIS mixing strategy will be applied" << std::endl;
     };
 
   private:
@@ -236,8 +236,8 @@ namespace green::sc {
   template <typename G, typename S1, typename St>
   class mixing_strategy {
   public:
-    explicit mixing_strategy(const params::params& p) {
-      switch (mixing_type E = p["mixing_type"]) {
+    explicit mixing_strategy(const params::params& p) : _mixing(nullptr), _verbose(p["verbose"]) {
+      switch (p["mixing_type"].as<mixing_type>()) {
         case NO_MIXING:
           _mixing = std::make_unique<no_mixing<G, S1, St>>();
           break;
@@ -271,15 +271,13 @@ namespace green::sc {
      * @param s_t - dynamic self-energy for the current iteration
      */
     void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) const {
+      if (_verbose > 0) _mixing->print_name();
       _mixing->update(iter, mu, h0, ovlp, g, s1, s_t);
-    }
-
-    void print_name() const {
-      _mixing->print_name();
     }
 
   private:
     std::unique_ptr<base_mixing<G, S1, St>> _mixing;
+    int                                     _verbose;
   };
 
 }  // namespace green::sc
