@@ -288,7 +288,8 @@ TEST_CASE("Mixing") {
     auto        p          = green::params::params("DESCR");
     std::string res_file_1 = random_name();
     std::string args_1 =
-        "test --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=SIGMA_DAMPING --damping 0.5 --results_file=" + res_file_1;
+        "test  --verbose 1 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=SIGMA_DAMPING --damping 0.5 --results_file=" +
+        res_file_1;
     green::sc::define_parameters(p);
     p.parse(args_1);
     green::h5pp::archive ar(res_file_1, "w");
@@ -313,7 +314,7 @@ TEST_CASE("Mixing") {
     std::string mix_file_1 = random_name();
     std::string args_1 =
         "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=DIIS --diis_start 1 "s +
-        "--damping 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
+        "--damping 0.5 --results_file="s + res_file_1 + " --verbose 1 --diis_file " + mix_file_1;
     green::sc::define_parameters(p);
     green::grids::define_parameters(p);
     p.parse(args_1);
@@ -381,7 +382,7 @@ TEST_CASE("Mixing") {
     std::string mix_file_1 = random_name();
     std::string args_1 =
         "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=CDIIS --diis_start 1 "s +
-        "--damping 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
+        "--damping 0.5 --verbose 1 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
     green::sc::define_parameters(p);
     green::grids::define_parameters(p);
     p.parse(args_1);

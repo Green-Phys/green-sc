@@ -253,9 +253,6 @@ namespace green::sc {
         case CDIIS:
           _mixing = std::make_unique<diis<G, S1, St>>(p, true);
           break;
-        default:
-          _mixing = std::make_unique<no_mixing<G, S1, St>>();
-          break;
       }
     }
 
