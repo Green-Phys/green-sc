@@ -100,7 +100,7 @@ void solve_with_damping(const std::string& damping_type, const std::string& damp
   auto        p        = green::params::params("DESCR");
   std::string res_file = random_name();
   std::string args     = "test --restart 0 --itermax 1000 --E_thr 1e-13 --mixing_type " + damping_type + " --damping " + damping +
-                     " --results_file=" + res_file;
+                     " --verbose 1 --results_file=" + res_file;
   green::sc::define_parameters(p);
   p.define<double>("alpha", "", 0.45);
   p.define<double>("beta", "", 0.5);
@@ -148,7 +148,7 @@ TEST_CASE("Self-consistency") {
   SECTION("Solve simple") {
     auto        p        = green::params::params("DESCR");
     std::string res_file = random_name();
-    std::string args     = "test --restart 0 --mixing_type NO_MIXING --itermax 100 --E_thr 1e-13 --results_file=" + res_file;
+    std::string args     = "test --verbose 1 --restart 0 --mixing_type NO_MIXING --itermax 100 --E_thr 1e-13 --results_file=" + res_file;
     green::sc::define_parameters(p);
     p.define<double>("alpha", "", 0.45);
     p.define<double>("beta", "", 0.5);
