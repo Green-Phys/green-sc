@@ -144,6 +144,7 @@ namespace green::opt {
      *  \param i
      * **/
     void add(const fock_sigma<S1, St>& Vec) {
+      if(_m_size == _diis_size) throw sc::sc_diis_vsp_error("VSpace is at it's maximum capacity");
       if(!utils::context.global_rank) write_to_dbase(_index, Vec);
       MPI_Barrier(utils::context.global);
       _m_size++;

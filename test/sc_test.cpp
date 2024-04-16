@@ -476,23 +476,32 @@ void test_vector_space() {
     REQUIRE_THROWS_AS(x_vsp.purge(0), green::sc::sc_diis_vsp_error);
   }
   for (int i = 0; i < 10; ++i) {
-    if (i >= diis_size) x_vsp.purge();
+    if (i >= diis_size) {
+      // don't allow to add if we reached the total capacity
+      REQUIRE_THROWS_AS(x_vsp.add(vec), green::sc::sc_diis_vsp_error);
+      x_vsp.purge();
+    }
     x_vsp.add(vec);
+    // check that vector subspace does not grow beyond it's maximum capacity
     REQUIRE(x_vsp.size() == ((i < diis_size) ? i + 1 : diis_size));
     auto& tmp  = x_vsp.get(0);
     auto& fock = tmp.get_fock();
     x_vsp.get(0, *vec_i);
     auto& fock_i = vec_i->get_fock();
+    // check that both get() functions return the same
     REQUIRE(std::equal(fock.begin(), fock.end(), fock_i.begin(),
                        [](const std::complex<double>& x, const std::complex<double>& y) { return std::abs(x - y) < 1e-10; }));
+    // when the vector space is smaller than it's maximum capacity zeros vector is always initial vector
     if (i < diis_size)
       REQUIRE(std::equal(fock.begin(), fock.end(), s1_0.begin(),
                          [](const std::complex<double>& x, const std::complex<double>& y) { return std::abs(x - y) < 1e-10; }));
+    // when the vector space at it's maximum capacity zeros vector is initial vector + iteration number - size of the subspace
     if (i >= diis_size)
       REQUIRE(
           std::equal(fock.begin(), fock.end(), s1_0.begin(), [&](const std::complex<double>& x, const std::complex<double>& y) {
             return std::abs(x - y - std::complex<double>(i + 1 - diis_size)) < 1e-10;
           }));
+    // each next vector is initial vector + iteration number
     vec.get_fock() << (s1_0 + i + 1);
     if (i < diis_size) {
       REQUIRE(std::abs(x_vsp.overlap(i, 0) - double(s1_0.size() * (i + 1))) < 1e-12);
