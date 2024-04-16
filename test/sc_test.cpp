@@ -481,6 +481,10 @@ void test_vector_space() {
     REQUIRE(x_vsp.size() == ((i < diis_size) ? i + 1 : diis_size));
     auto& tmp  = x_vsp.get(0);
     auto& fock = tmp.get_fock();
+    x_vsp.get(0, *vec_i);
+    auto& fock_i = vec_i->get_fock();
+    REQUIRE(std::equal(fock.begin(), fock.end(), fock_i.begin(),
+                       [](const std::complex<double>& x, const std::complex<double>& y) { return std::abs(x - y) < 1e-10; }));
     if (i < diis_size)
       REQUIRE(std::equal(fock.begin(), fock.end(), s1_0.begin(),
                          [](const std::complex<double>& x, const std::complex<double>& y) { return std::abs(x - y) < 1e-10; }));
