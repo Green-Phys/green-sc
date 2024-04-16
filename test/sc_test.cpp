@@ -18,6 +18,7 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <green/sc/cyclic_vector_space_fock_sigma.h>
 #include <green/sc/sc_loop.h>
 
 #include <catch2/catch_session.hpp>
@@ -287,7 +288,8 @@ TEST_CASE("Mixing") {
     auto        p          = green::params::params("DESCR");
     std::string res_file_1 = random_name();
     std::string args_1 =
-        "test --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=SIGMA_DAMPING --damping 0.5 --results_file=" + res_file_1;
+        "test  --verbose 1 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=SIGMA_DAMPING --damping 0.5 --results_file=" +
+        res_file_1;
     green::sc::define_parameters(p);
     p.parse(args_1);
     green::h5pp::archive ar(res_file_1, "w");
@@ -312,7 +314,7 @@ TEST_CASE("Mixing") {
     std::string mix_file_1 = random_name();
     std::string args_1 =
         "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=DIIS --diis_start 1 "s +
-        "--damping 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
+        "--damping 0.5 --results_file="s + res_file_1 + " --verbose 1 --diis_file " + mix_file_1;
     green::sc::define_parameters(p);
     green::grids::define_parameters(p);
     p.parse(args_1);
@@ -380,7 +382,7 @@ TEST_CASE("Mixing") {
     std::string mix_file_1 = random_name();
     std::string args_1 =
         "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=CDIIS --diis_start 1 "s +
-        "--damping 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
+        "--damping 0.5 --verbose 1 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
     green::sc::define_parameters(p);
     green::grids::define_parameters(p);
     p.parse(args_1);
@@ -438,12 +440,13 @@ TEST_CASE("Mixing") {
   }
 }
 
-TEST_CASE("FockSigmaVectorSpace") {
+template <template <typename, typename> typename T>
+void test_vector_space() {
   using S1          = green::sc::ztensor<4>;
   using St          = green::utils::shared_object<green::sc::ztensor<5>>;
-  using vec_t       = green::opt::FockSigma<S1, St>;
+  using vec_t       = green::opt::fock_sigma<S1, St>;
   using problem_t   = green::opt::shared_optimization_problem<vec_t>;
-  using vec_space_t = green::opt::VSpaceFockSigma<S1, St>;
+  using vec_space_t = T<S1, St>;
 
   S1 s1_0(1, 2, 3, 3);
   St s_t_0(10, 1, 2, 3, 3);
@@ -473,19 +476,32 @@ TEST_CASE("FockSigmaVectorSpace") {
     REQUIRE_THROWS_AS(x_vsp.purge(0), green::sc::sc_diis_vsp_error);
   }
   for (int i = 0; i < 10; ++i) {
-    if (i >= diis_size) x_vsp.purge();
+    if (i >= diis_size) {
+      // don't allow to add if we reached the total capacity
+      REQUIRE_THROWS_AS(x_vsp.add(vec), green::sc::sc_diis_vsp_error);
+      x_vsp.purge();
+    }
     x_vsp.add(vec);
+    // check that vector subspace does not grow beyond it's maximum capacity
     REQUIRE(x_vsp.size() == ((i < diis_size) ? i + 1 : diis_size));
     auto& tmp  = x_vsp.get(0);
     auto& fock = tmp.get_fock();
+    x_vsp.get(0, *vec_i);
+    auto& fock_i = vec_i->get_fock();
+    // check that both get() functions return the same
+    REQUIRE(std::equal(fock.begin(), fock.end(), fock_i.begin(),
+                       [](const std::complex<double>& x, const std::complex<double>& y) { return std::abs(x - y) < 1e-10; }));
+    // when the vector space is smaller than it's maximum capacity zeros vector is always initial vector
     if (i < diis_size)
       REQUIRE(std::equal(fock.begin(), fock.end(), s1_0.begin(),
                          [](const std::complex<double>& x, const std::complex<double>& y) { return std::abs(x - y) < 1e-10; }));
+    // when the vector space at it's maximum capacity zeros vector is initial vector + iteration number - size of the subspace
     if (i >= diis_size)
       REQUIRE(
           std::equal(fock.begin(), fock.end(), s1_0.begin(), [&](const std::complex<double>& x, const std::complex<double>& y) {
             return std::abs(x - y - std::complex<double>(i + 1 - diis_size)) < 1e-10;
           }));
+    // each next vector is initial vector + iteration number
     vec.get_fock() << (s1_0 + i + 1);
     if (i < diis_size) {
       REQUIRE(std::abs(x_vsp.overlap(i, 0) - double(s1_0.size() * (i + 1))) < 1e-12);
@@ -498,6 +514,10 @@ TEST_CASE("FockSigmaVectorSpace") {
   x_vsp.reset();
   std::filesystem::remove(diis_file);
 }
+
+TEST_CASE("FockSigmaVectorSpace") { test_vector_space<green::opt::vector_space_fock_sigma>(); }
+
+TEST_CASE("CyclicFockSigmaVectorSpace") { test_vector_space<green::opt::cyclic_vector_space_fock_sigma>(); }
 
 int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
