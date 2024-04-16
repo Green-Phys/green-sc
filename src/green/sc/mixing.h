@@ -151,9 +151,9 @@ namespace green::sc {
    */
   template <typename G, typename S1, typename St>
   class diis : public sigma_damping<G, S1, St> {
-    using vec_t       = opt::FockSigma<S1, St>;
+    using vec_t       = opt::fock_sigma<S1, St>;
     using problem_t   = opt::shared_optimization_problem<vec_t>;
-    using vec_space_t = opt::VSpaceFockSigma<S1, St>;
+    using vec_space_t = opt::vector_space_fock_sigma<S1, St>;
     using residual_t  = std::function<void(vec_space_t&, problem_t&, vec_t&)>;
 
   public:

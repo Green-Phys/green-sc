@@ -18,6 +18,7 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <green/sc/cyclic_vector_space_fock_sigma.h>
 #include <green/sc/sc_loop.h>
 
 #include <catch2/catch_session.hpp>
@@ -438,12 +439,13 @@ TEST_CASE("Mixing") {
   }
 }
 
-TEST_CASE("FockSigmaVectorSpace") {
+template <template <typename, typename> typename T>
+void test_vector_space() {
   using S1          = green::sc::ztensor<4>;
   using St          = green::utils::shared_object<green::sc::ztensor<5>>;
-  using vec_t       = green::opt::FockSigma<S1, St>;
+  using vec_t       = green::opt::fock_sigma<S1, St>;
   using problem_t   = green::opt::shared_optimization_problem<vec_t>;
-  using vec_space_t = green::opt::VSpaceFockSigma<S1, St>;
+  using vec_space_t = T<S1, St>;
 
   S1 s1_0(1, 2, 3, 3);
   St s_t_0(10, 1, 2, 3, 3);
@@ -498,6 +500,10 @@ TEST_CASE("FockSigmaVectorSpace") {
   x_vsp.reset();
   std::filesystem::remove(diis_file);
 }
+
+TEST_CASE("FockSigmaVectorSpace") { test_vector_space<green::opt::vector_space_fock_sigma>(); }
+
+TEST_CASE("CyclicFockSigmaVectorSpace") { test_vector_space<green::opt::cyclic_vector_space_fock_sigma>(); }
 
 int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);

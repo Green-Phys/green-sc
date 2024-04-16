@@ -29,6 +29,9 @@
 
 namespace green::opt {
 
+  using MMatrixXcd  = Eigen::Map<Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
+  using CMMatrixXcd = Eigen::Map<const Eigen::Matrix<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
+
   template <typename vec_t>
   class shared_optimization_problem {
   private:
@@ -42,9 +45,9 @@ namespace green::opt {
   };
 
   template <>
-  class shared_optimization_problem<FockSigma<ztensor<4>, utils::shared_object<ztensor<5>>>> {
+  class shared_optimization_problem<fock_sigma<ztensor<4>, utils::shared_object<ztensor<5>>>> {
   private:
-    using vec_t = FockSigma<ztensor<4>, utils::shared_object<ztensor<5>>>;
+    using vec_t = fock_sigma<ztensor<4>, utils::shared_object<ztensor<5>>>;
     vec_t& _vec;
 
   public:
@@ -55,7 +58,7 @@ namespace green::opt {
   };
 
   template <typename G, typename S1, typename St>
-  void commutator_t(const grids::transformer_t& ft, St& C_t, G& G_t, FockSigma<S1, St>& FS_t, double mu, const S1& H,
+  void commutator_t(const grids::transformer_t& ft, St& C_t, G& G_t, fock_sigma<S1, St>& FS_t, double mu, const S1& H,
                     const S1& S) { /*do nothing, used for the test purpose*/
   }
 
@@ -125,7 +128,7 @@ namespace green::opt {
    */
   template <>
   void commutator_t(const grids::transformer_t& ft, utils::shared_object<ztensor<5>>& C_t, utils::shared_object<ztensor<5>>& G_t,
-                    FockSigma<ztensor<4>, utils::shared_object<ztensor<5>>>& FS_t, double mu, const ztensor<4>& H0,
+                    fock_sigma<ztensor<4>, utils::shared_object<ztensor<5>>>& FS_t, double mu, const ztensor<4>& H0,
                     const ztensor<4>& S) {
     auto& C_t_full = C_t.object();
     C_t.fence();
@@ -134,7 +137,7 @@ namespace green::opt {
   }
 
   template <>
-  void commutator_t(const grids::transformer_t& ft, ztensor<5>& C_t, ztensor<5>& G_t, FockSigma<ztensor<4>, ztensor<5>>& FS_t,
+  void commutator_t(const grids::transformer_t& ft, ztensor<5>& C_t, ztensor<5>& G_t, fock_sigma<ztensor<4>, ztensor<5>>& FS_t,
                     double mu, const ztensor<4>& H0, const ztensor<4>& S) {
     size_t       nao           = G_t.shape()[4];
     MPI_Datatype dt_matrix     = utils::create_matrix_datatype<std::complex<double>>(nao * nao);
