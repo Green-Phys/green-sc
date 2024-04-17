@@ -18,8 +18,8 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef SC_MIXING_H
-#define SC_MIXING_H
+#ifndef GREEN_SC_MIXING_H
+#define GREEN_SC_MIXING_H
 
 #include <green/opt/diis_alg.h>
 #include <green/params/params.h>
@@ -279,4 +279,4 @@ namespace green::sc {
 
 }  // namespace green::sc
 
-#endif  // SC_MIXING_H
+#endif  // GREEN_SC_MIXING_H
