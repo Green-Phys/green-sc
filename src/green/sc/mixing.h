@@ -160,8 +160,8 @@ namespace green::sc {
     diis(const params::params& p, bool commutator) :
         sigma_damping<G, S1, St>(p["damping"], p["results_file"]), _damping(p["damping"]), _results_file(p["results_file"]),
         _diis_file(p["diis_file"]), _diis_start(p["diis_start"]), _diis_size(p["diis_size"]),
-        _diis(_diis_start, _diis_size, p["verbose"]), _x_vsp(_diis_file, _diis_size),
-        _res_vsp(_diis_file, _diis_size - 1, "residuals"), _ft(p), _commutator(commutator) {}
+        _diis(_diis_start, _diis_size, p["verbose"]), _x_vsp(_diis_file, _diis_size + 1),
+        _res_vsp(_diis_file, _diis_size, "residuals"), _ft(p), _commutator(commutator) {}
 
     void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) override {
       vec_t vec(s1, s_t);
