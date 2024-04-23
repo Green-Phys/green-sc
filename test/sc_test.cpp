@@ -469,6 +469,12 @@ void test_vector_space() {
   vec_t       vec(s1, s_t);
   auto        vec_i = std::make_shared<vec_t>(s1, s_t);
   auto        vec_j = std::make_shared<vec_t>(s1, s_t);
+  SECTION("Check uninitialized") {
+    x_vsp.add(vec);
+    REQUIRE_THROWS_AS(x_vsp.overlap(0, 0), green::sc::sc_diis_vsp_error);
+    REQUIRE_THROWS_AS(x_vsp.overlap(0, *vec_i), green::sc::sc_diis_vsp_error);
+    x_vsp.purge();
+  }
   x_vsp.init(vec_i, vec_j);
   SECTION("Check empty") {
     REQUIRE_THROWS_AS(x_vsp.get(0), green::sc::sc_diis_vsp_error);
@@ -510,6 +516,11 @@ void test_vector_space() {
   SECTION("Check outside the boundary") {
     REQUIRE_THROWS_AS(x_vsp.get(diis_size), green::sc::sc_diis_vsp_error);
     REQUIRE_THROWS_AS(x_vsp.purge(diis_size), green::sc::sc_diis_vsp_error);
+  }
+  SECTION("Check restore") {
+    vec_space_t x_vsp2(diis_file, diis_size);
+    REQUIRE(x_vsp2.restore());
+    REQUIRE(x_vsp2.size() == x_vsp.size());
   }
   x_vsp.reset();
   std::filesystem::remove(diis_file);

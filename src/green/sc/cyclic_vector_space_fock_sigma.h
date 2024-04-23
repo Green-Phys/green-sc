@@ -55,12 +55,11 @@ namespace green::opt {
   template <typename S1, typename St>
   class cyclic_vector_space_fock_sigma {
   private:
-    size_t                           _m_size;
-    size_t                           _index; // Counter of all vectors coming to the vector space.
-                                             // Used only for cyclic operations
-    size_t                           _diis_size;
-    std::string                      _m_dbase;  // Name of the file where the vectors will be saved
-    std::string                      _vecname;  // Name of the vector to be saved
+    size_t                            _m_size;
+    size_t                            _index;  // Counter of all vectors coming to the vector space.
+    size_t                            _diis_size;
+    std::string                       _m_dbase;  // Name of the file where the vectors will be saved
+    std::string                       _vecname;  // Name of the vector to be saved
 
     std::weak_ptr<fock_sigma<S1, St>> _vec_i;
     std::weak_ptr<fock_sigma<S1, St>> _vec_j;
@@ -73,7 +72,6 @@ namespace green::opt {
       read_from_dbase(i, obj);
       return obj;
     }
-
 
     /** \brief Cyclic implementation: Read vector from position \f[i\f] in the file
      *  \param i
@@ -93,7 +91,7 @@ namespace green::opt {
     void write_to_dbase(const size_t i, const fock_sigma<S1, St>& Vec) {
       h5pp::archive vsp_ar(_m_dbase, "a");
       // compute new cyclic index of HDF5 group to write new vector
-      size_t        index =  i % _diis_size;
+      size_t index = i % _diis_size;
       sc::internal::write(Vec.get_fock(), _vecname + "/vec" + std::to_string(index) + "/Fock/data", vsp_ar);
       sc::internal::write(Vec.get_sigma(), _vecname + "/vec" + std::to_string(index) + "/Selfenergy/data", vsp_ar);
       vsp_ar.close();
@@ -101,8 +99,8 @@ namespace green::opt {
 
   public:
     void init(std::shared_ptr<fock_sigma<S1, St>>& vec_i, std::shared_ptr<fock_sigma<S1, St>>& vec_j) {
-      _vec_i = vec_i;
-      _vec_j = vec_j;
+      _vec_i     = vec_i;
+      _vec_j     = vec_j;
     }
 
     void reset() {
@@ -119,6 +117,42 @@ namespace green::opt {
      */
     explicit cyclic_vector_space_fock_sigma(std::string db, size_t diis_size, std::string vecname = "FockSelfenergy") :
         _m_size(0), _index(0), _diis_size(diis_size), _m_dbase(std::move(db)), _vecname(std::move(vecname)) {}
+
+    /**
+     * Try to restore vector subspace state
+     */
+    bool restore() {
+      if (!std::filesystem::exists(_m_dbase)) {
+        return true;
+      }
+      h5pp::archive ar(_m_dbase, "r");
+      // empty archive
+      if (!ar.is_data(_vecname + "/m_size") || !ar.is_data(_vecname + "/diis_size") || !ar.is_data(_vecname + "/index")) {
+        return true;
+      }
+      size_t m_size, diis_size, index;
+      ar[_vecname + "/m_size"] >> m_size;
+      ar[_vecname + "/diis_size"] >> diis_size;
+      ar[_vecname + "/index"] >> index;
+      ar.close();
+      if (diis_size == _diis_size) {
+        _m_size = m_size;
+        _index  = index;
+        return true;
+      }
+      return false;
+    }
+
+    void update_indices() {
+      if (!utils::context.global_rank) {
+        h5pp::archive vsp_ar(_m_dbase, "a");
+        vsp_ar[_vecname + "/m_size"] << _m_size;
+        vsp_ar[_vecname + "/index"] << _index;
+        vsp_ar[_vecname + "/diis_size"] << _diis_size;
+        vsp_ar.close();
+      }
+      MPI_Barrier(utils::context.global);
+    }
 
     /**
      * Read and return vector from database at a given index
@@ -144,11 +178,12 @@ namespace green::opt {
      *  \param i
      * **/
     void add(const fock_sigma<S1, St>& Vec) {
-      if(_m_size == _diis_size) throw sc::sc_diis_vsp_error("VSpace is at it's maximum capacity");
-      if(!utils::context.global_rank) write_to_dbase(_index, Vec);
+      if (_m_size == _diis_size) throw sc::sc_diis_vsp_error("VSpace is at it's maximum capacity");
+      if (!utils::context.global_rank) write_to_dbase(_index, Vec);
       MPI_Barrier(utils::context.global);
       _m_size++;
       _index++;
+      update_indices();
     }
 
     /**
@@ -160,6 +195,9 @@ namespace green::opt {
      * @return
      */
     [[nodiscard]] std::complex<double> overlap(const size_t i, const fock_sigma<S1, St>& vec_j) {
+      if (_vec_i.expired()) {
+        throw sc::sc_diis_vsp_error("Uninitialized shared memory");
+      }
       fock_sigma<S1, St>& vec_i = *_vec_i.lock();
       get(i, vec_i);
       return overlap(vec_i, vec_j);
@@ -173,6 +211,9 @@ namespace green::opt {
      * @return Euclidean overlap between i-th and j-th vector
      */
     [[nodiscard]] std::complex<double> overlap(const size_t i, const size_t j) {
+      if (_vec_i.expired() || _vec_j.expired()) {
+        throw sc::sc_diis_vsp_error("Uninitialized shared memory");
+      }
       fock_sigma<S1, St>& vec_i = *_vec_i.lock();
       fock_sigma<S1, St>& vec_j = *_vec_j.lock();
       get(i, vec_i);
@@ -208,8 +249,8 @@ namespace green::opt {
         throw sc::sc_diis_vsp_error("VSpace container is empty, no vectors can be deleted");
       }
       _m_size--;
+      update_indices();
     }
-
 
     void make_linear_comb(const Eigen::VectorXcd& C, fock_sigma<S1, St>& r) {
       // get(size() - 1, r);  // this is needed to initialize r

@@ -128,6 +128,42 @@ namespace green::opt {
         _m_size(0), _diis_size(diis_size), _m_dbase(std::move(db)), _vecname(std::move(vecname)) {}
 
     /**
+     * Try to restore vector subspace state
+     */
+    bool restore() {
+      if (!std::filesystem::exists(_m_dbase)) {
+        return true;
+      }
+      h5pp::archive ar(_m_dbase, "r");
+      // empty archive
+      if (!ar.is_data(_vecname + "/m_size") || !ar.is_data(_vecname + "/diis_size")) {
+        return true;
+      }
+      size_t m_size, diis_size;
+      ar[_vecname + "/m_size"] >> m_size;
+      ar[_vecname + "/diis_size"] >> diis_size;
+      ar.close();
+      if (diis_size == _diis_size) {
+        _m_size = m_size;
+        return true;
+      }
+      return false;
+    }
+
+    /**
+     * update indices values
+     */
+    void update_indices() {
+      if (!utils::context.global_rank) {
+        h5pp::archive vsp_ar(_m_dbase, "a");
+        vsp_ar[_vecname + "/m_size"] << _m_size;
+        vsp_ar[_vecname + "/diis_size"] << _diis_size;
+        vsp_ar.close();
+      }
+      MPI_Barrier(utils::context.global);
+    }
+
+    /**
      * Read and return vector from database at a given index
      *
      * @param i vector index
@@ -161,10 +197,11 @@ namespace green::opt {
     void add(const fock_sigma<S1, St>& vec) {
       // we don't have automatic purge therefore we have to make sure that vector space
       // does not grow above maximum capacity
-      if(_m_size == _diis_size) throw sc::sc_diis_vsp_error("VSpace is at it's maximum capacity");
+      if (_m_size == _diis_size) throw sc::sc_diis_vsp_error("VSpace is at it's maximum capacity");
       if (!utils::context.global_rank) write_to_dbase(vec);
       MPI_Barrier(utils::context.global);
       _m_size++;
+      update_indices();
     }
 
     /**
@@ -175,6 +212,9 @@ namespace green::opt {
      * @return Euclidean overlap between i-th and a given right side vector
      */
     [[nodiscard]] std::complex<double> overlap(const size_t i, const fock_sigma<S1, St>& vec_j) {
+      if (_vec_i.expired()) {
+        throw sc::sc_diis_vsp_error("Uninitialized shared memory");
+      }
       fock_sigma<S1, St>& vec_i = *_vec_i.lock();
       get(i, vec_i);
       return overlap(vec_i, vec_j);
@@ -188,6 +228,9 @@ namespace green::opt {
      * @return Euclidean overlap between i-th and j-th vector
      */
     [[nodiscard]] std::complex<double> overlap(const size_t i, const size_t j) {
+      if (_vec_i.expired() || _vec_j.expired()) {
+        throw sc::sc_diis_vsp_error("Uninitialized shared memory");
+      }
       fock_sigma<S1, St>& vec_i = *_vec_i.lock();
       fock_sigma<S1, St>& vec_j = *_vec_j.lock();
       get(i, vec_i);
@@ -237,6 +280,7 @@ namespace green::opt {
       }
       MPI_Barrier(utils::context.global);
       _m_size--;
+      update_indices();
     }
 
     void make_linear_comb(const Eigen::VectorXcd& C, fock_sigma<S1, St>& r) {

@@ -161,7 +161,19 @@ namespace green::sc {
         sigma_damping<G, S1, St>(p["damping"], p["results_file"]), _damping(p["damping"]), _results_file(p["results_file"]),
         _diis_file(p["diis_file"]), _diis_start(p["diis_start"]), _diis_size(p["diis_size"]),
         _diis(_diis_start, _diis_size, p["verbose"]), _x_vsp(_diis_file, _diis_size + 1),
-        _res_vsp(_diis_file, _diis_size, "residuals"), _ft(p), _commutator(commutator) {}
+        _res_vsp(_diis_file, _diis_size, "residuals"), _ft(p), _commutator(commutator) {
+      if (!p["restart"].as<bool>() || !p["diis_restart"].as<bool>()) {
+        if (!utils::context.global_rank) std::filesystem::remove(_diis_file);
+        MPI_Barrier(utils::context.global);
+        return;
+      }
+      if (!_res_vsp.restore() || _x_vsp.restore()) {
+        if (!utils::context.global_rank) std::filesystem::remove(_diis_file);
+        MPI_Barrier(utils::context.global);
+        return;
+      }
+      _diis.reinit(_res_vsp);
+    }
 
     void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) override {
       vec_t vec(s1, s_t);

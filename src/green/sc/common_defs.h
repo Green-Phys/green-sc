@@ -71,6 +71,7 @@ namespace green::sc {
     p.define<int>("diis_start", "Iteration number when we start using DIIS", 2);
     p.define<int>("diis_size", "Size of DIIS subspace", 3);
     p.define<std::string>("diis_file", "File to store results", "diis.h5");
+    p.define<bool>("diis_restart", "Restart DIIS from previous data", true);
     p.define<std::string>("results_file", "File to store results", "sim.h5");
     p.define<int>("verbose", "Print verbose output.", 0);
     p.define<bool>("restart", "Try to restart simulation from the previously obtained results", false);
