@@ -203,6 +203,8 @@ namespace green::sc {
       }
       if (iter == 0) {
         _diis.next_step(vec, res, _x_vsp, _res_vsp, residual, problem);
+        _x_vsp.reset();
+        _res_vsp.reset();
         return;
       }
       if (iter <= _diis_start) {

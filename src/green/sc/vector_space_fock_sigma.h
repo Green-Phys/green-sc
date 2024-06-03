@@ -198,6 +198,7 @@ namespace green::opt {
       // we don't have automatic purge therefore we have to make sure that vector space
       // does not grow above maximum capacity
       if (_m_size == _diis_size) throw sc::sc_diis_vsp_error("VSpace is at it's maximum capacity");
+      MPI_Barrier(utils::context.global);
       if (!utils::context.global_rank) write_to_dbase(vec);
       MPI_Barrier(utils::context.global);
       _m_size++;
