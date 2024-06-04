@@ -70,7 +70,7 @@ namespace green::sc::internal {
    *
    * @tparam T - type of object
    * @param obj_n - result for current iteration
-   * @param obj_n_1 - result for previous iteration iteration
+   * @param obj_n_1 - result for previous iteration
    * @param damping - mixing parameter
    */
   template <typename T>
