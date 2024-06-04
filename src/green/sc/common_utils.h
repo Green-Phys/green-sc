@@ -239,6 +239,7 @@ namespace green::sc {
    * @tparam G - type of the Green's function
    * @tparam S1 - type of the static part of the Self-energy
    * @tparam St - type of the dynamical part of the Self-energy
+   * @param mu - [OUT]  Chemical potential
    * @param g_tau - [OUT]  Green's function
    * @param sigma_1 - [OUT] static part of the Self-energy
    * @param sigma_tau - [OUT] dynamic part of the Self-energy
@@ -246,7 +247,7 @@ namespace green::sc {
    * @return iteration number to start from
    */
   template <typename G, typename S1, typename St>
-  size_t read_results(G& g_tau, S1& sigma_1, St& sigma_tau, const std::string& results_file) {
+  size_t read_results(double & mu, G& g_tau, S1& sigma_1, St& sigma_tau, const std::string& results_file) {
     if (!std::filesystem::exists(results_file)) {
       return 0;
     }
@@ -259,6 +260,8 @@ namespace green::sc {
     internal::read(sigma_1, "iter" + std::to_string(iter) + "/Sigma1", ar);
     internal::read(sigma_tau, "iter" + std::to_string(iter) + "/Selfenergy/data", ar);
     internal::read(g_tau, "iter" + std::to_string(iter) + "/G_tau/data", ar);
+    if(ar.is_data("iter" + std::to_string(iter) + "/mu"))
+      ar["iter" + std::to_string(iter) + "/mu"] >> mu;
     ar.close();
     return iter + 1;
   }

@@ -60,12 +60,14 @@ public:
   }
   double diff(const G&, const Sigma1&, const Sigma_tau&) { return _diff; }
   void   dump_iteration(size_t, const std::string&) {};
-  double mu() { return 0; }
+  double mu() const { return 0; }
+  double& mu() { return _mu; }
 
 private:
   double _alpha;
   double _beta;
   double _diff;
+  double _mu;
 };
 
 class fourth_power_equation_solver {

@@ -94,7 +94,7 @@ namespace green::sc {
       utils::timing& t = utils::timing::get_instance();
       t.start("Read results");
       if (_restart) {
-        start_iter = read_results(g0_tau, sigma1, sigma_tau, _results_file);
+        start_iter = read_results(_dyson_solver.mu(), g0_tau, sigma1, sigma_tau, _results_file);
       } else {
         if (!_context.global_rank) {
           std::filesystem::remove(_results_file);
