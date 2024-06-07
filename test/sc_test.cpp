@@ -59,7 +59,7 @@ public:
     g            = g_new;
   }
   double diff(const G&, const Sigma1&, const Sigma_tau&) { return _diff; }
-  void   dump_iteration(size_t, const std::string&) {};
+  void   dump_iteration(size_t, const G&, const Sigma1&, const Sigma_tau&, const std::string&) {};
   double mu() const { return 0; }
   double& mu() { return _mu; }
 

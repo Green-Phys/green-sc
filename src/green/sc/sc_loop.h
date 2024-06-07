@@ -127,7 +127,7 @@ namespace green::sc {
         t.start("Store results");
         if (!_context.global_rank) {
           dump_iteration(_iter, g0_tau, sigma1, sigma_tau);
-          _dyson_solver.dump_iteration(_iter, _results_file);
+          _dyson_solver.dump_iteration(_iter, g0_tau, sigma1, sigma_tau, _results_file);
         }
         t.end();
         if (!_context.global_rank) {
