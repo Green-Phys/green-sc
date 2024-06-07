@@ -65,8 +65,8 @@ namespace green::sc {
   inline void define_parameters(params::params& p) {
     p.define<mixing_type>("mixing_type", "Type of iteration convergence mixing. We use no mixing by default", SIGMA_DAMPING);
     p.define<double>("damping",
-                     "Simple mixing paramters between current ad previous iteration. Should be between 0 and 1: 0 - no damping, "
-                     "1 - full damping.",
+                     "Simple mixing paramters between current ad previous iteration. Should be between 0 and 1: 1 - no damping (direct Roothaan steps), "
+                     "0 - full damping (and no update).",
                      0.7);
     p.define<int>("diis_start", "Iteration number when we start using DIIS", 2);
     p.define<int>("diis_size", "Size of DIIS subspace", 3);
