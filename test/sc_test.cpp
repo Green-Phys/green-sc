@@ -197,8 +197,12 @@ TEST_CASE("Self-consistency") {
   SECTION("Solve with mixing") {
     solve_with_mixing("G_MIXING", "0.8");
     solve_with_mixing("SIGMA_MIXING", "0.8");
+    solve_with_mixing("G_MIXING", "1.1");
+    solve_with_mixing("SIGMA_MIXING", "1.1");
     REQUIRE_THROWS_AS(solve_with_mixing("G_MIXING", "2.8"), green::sc::sc_incorrect_mixing_error);
     REQUIRE_THROWS_AS(solve_with_mixing("SIGMA_MIXING", "2.8"), green::sc::sc_incorrect_mixing_error);
+    REQUIRE_THROWS_AS(solve_with_mixing("G_MIXING", "-0.1"), green::sc::sc_incorrect_mixing_error);
+    REQUIRE_THROWS_AS(solve_with_mixing("SIGMA_MIXING", "0.0"), green::sc::sc_incorrect_mixing_error);
   }
 
   SECTION("Restart") {
