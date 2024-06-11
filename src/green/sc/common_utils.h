@@ -66,17 +66,17 @@ namespace green::sc::internal {
 
   /**
    * Mix data of current (obj_n) and previous (obj_n_1) iterations
-   * obj_n = obj_n * damping + obj_n_1 * (1 - damping)
+   * obj_n = obj_n * mixing_weight + obj_n_1 * (1 - mixing_weight)
    *
    * @tparam T - type of object
    * @param obj_n - result for current iteration
    * @param obj_n_1 - result for previous iteration
-   * @param damping - mixing parameter
+   * @param mixing_weight - mixing parameter
    */
   template <typename T>
-  void update(T& obj_n, T& obj_n_1, double damping) {
-    obj_n *= damping;
-    obj_n += obj_n_1 * (1.0 - damping);
+  void update(T& obj_n, T& obj_n_1, double mixing_weight) {
+    obj_n *= mixing_weight;
+    obj_n += obj_n_1 * (1.0 - mixing_weight);
   }
 
   template <typename T, size_t N, typename C>
@@ -187,18 +187,18 @@ namespace green::sc::internal {
   /**
    * Shared memory version of update function
    * Mix data of current (obj_n) and previous (obj_n_1) iterations
-   * obj_n = obj_n * damping + obj_n_1 * (1 - damping)
+   * obj_n = obj_n * mixing_weight + obj_n_1 * (1 - mixing_weight)
    *
    * @tparam T - type of object
    * @param obj_n - result for current iteration
    * @param obj_n_1 - result for previous iteration iteration
-   * @param damping - mixing parameter
+   * @param mixing_weight - mixing parameter
    */
-  inline void update(utils::shared_object<ztensor<5>>& obj_n, utils::shared_object<ztensor<5>>& obj_n_1, double damping) {
+  inline void update(utils::shared_object<ztensor<5>>& obj_n, utils::shared_object<ztensor<5>>& obj_n_1, double mixing_weight) {
     obj_n.fence();
     if (!utils::context.node_rank) {
-      obj_n.object() *= damping;
-      obj_n.object() += obj_n_1.object() * (1.0 - damping);
+      obj_n.object() *= mixing_weight;
+      obj_n.object() += obj_n_1.object() * (1.0 - mixing_weight);
     }
     obj_n.fence();
   }

@@ -98,10 +98,10 @@ private:
   double _U;
 };
 
-void solve_with_damping(const std::string& damping_type, const std::string& damping) {
+void solve_with_mixing(const std::string& mixing_type, const std::string& mixing_weight) {
   auto        p        = green::params::params("DESCR");
   std::string res_file = random_name();
-  std::string args     = "test --restart 0 --itermax 1000 --E_thr 1e-13 --mixing_type " + damping_type + " --damping " + damping +
+  std::string args     = "test --restart 0 --itermax 1000 --E_thr 1e-13 --mixing_type " + mixing_type + " --mixing_weight " + mixing_weight +
                      " --verbose 1 --results_file=" + res_file;
   green::sc::define_parameters(p);
   p.define<double>("alpha", "", 0.45);
@@ -194,11 +194,11 @@ TEST_CASE("Self-consistency") {
     std::filesystem::remove(res_file);
   }
 
-  SECTION("Solve with damping") {
-    solve_with_damping("G_DAMPING", "0.8");
-    solve_with_damping("SIGMA_DAMPING", "0.8");
-    REQUIRE_THROWS_AS(solve_with_damping("G_DAMPING", "1.8"), green::sc::sc_incorrect_damping_error);
-    REQUIRE_THROWS_AS(solve_with_damping("SIGMA_DAMPING", "1.8"), green::sc::sc_incorrect_damping_error);
+  SECTION("Solve with mixing") {
+    solve_with_mixing("G_MIXING", "0.8");
+    solve_with_mixing("SIGMA_MIXING", "0.8");
+    REQUIRE_THROWS_AS(solve_with_mixing("G_MIXING", "2.8"), green::sc::sc_incorrect_mixing_error);
+    REQUIRE_THROWS_AS(solve_with_mixing("SIGMA_MIXING", "2.8"), green::sc::sc_incorrect_mixing_error);
   }
 
   SECTION("Restart") {
@@ -288,9 +288,18 @@ TEST_CASE("Mixing") {
   SECTION("Damping") {
     using mixing_t         = green::sc::mixing_strategy<double, double, double>;
     auto        p          = green::params::params("DESCR");
+    std::string args_1 =
+        "test  --verbose 1 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=SIGMA_MIXING --damping 0.5";
+    green::sc::define_parameters(p);
+    p.parse(args_1);
+    REQUIRE_THROWS_AS(mixing_t(p), green::sc::sc_incorrect_mixing_error);
+  }
+  SECTION("SimpleMixing") {
+    using mixing_t         = green::sc::mixing_strategy<double, double, double>;
+    auto        p          = green::params::params("DESCR");
     std::string res_file_1 = random_name();
     std::string args_1 =
-        "test  --verbose 1 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=SIGMA_DAMPING --damping 0.5 --results_file=" +
+        "test  --verbose 1 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=SIGMA_MIXING --mixing_weight 0.5 --results_file=" +
         res_file_1;
     green::sc::define_parameters(p);
     p.parse(args_1);
@@ -305,8 +314,8 @@ TEST_CASE("Mixing") {
     double   sigma_t = 0.0;
     mixing_t mixing(p);
     mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
-    REQUIRE(std::abs(sigma_1 - 2.0 * p["damping"].as<double>()) < 1e-9);
-    REQUIRE(std::abs(sigma_t - 1.0 * p["damping"].as<double>()) < 1e-9);
+    REQUIRE(std::abs(sigma_1 - 2.0 * p["mixing_weight"].as<double>()) < 1e-9);
+    REQUIRE(std::abs(sigma_t - 1.0 * p["mixing_weight"].as<double>()) < 1e-9);
     std::filesystem::remove(res_file_1);
   }
   SECTION("DIIS before extrapolation") {
@@ -316,7 +325,7 @@ TEST_CASE("Mixing") {
     std::string mix_file_1 = random_name();
     std::string args_1 =
         "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=DIIS --diis_start 1 "s +
-        "--damping 0.5 --results_file="s + res_file_1 + " --verbose 1 --diis_file " + mix_file_1;
+        "--mixing_weight 0.5 --results_file="s + res_file_1 + " --verbose 1 --diis_file " + mix_file_1;
     green::sc::define_parameters(p);
     green::grids::define_parameters(p);
     p.parse(args_1);
@@ -334,8 +343,8 @@ TEST_CASE("Mixing") {
     sigma_1 = 0.5;
     sigma_t = 1.0;
     mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
-    REQUIRE(std::abs(sigma_1 - (1.0 * p["damping"].as<double>() + 0.5 * (1 - p["damping"].as<double>()))) < 1e-9);
-    REQUIRE(std::abs(sigma_t - (2.0 * p["damping"].as<double>() + 1.0 * (1 - p["damping"].as<double>()))) < 1e-9);
+    REQUIRE(std::abs(sigma_1 - (1.0 * p["mixing_weight"].as<double>() + 0.5 * (1 - p["mixing_weight"].as<double>()))) < 1e-9);
+    REQUIRE(std::abs(sigma_t - (2.0 * p["mixing_weight"].as<double>() + 1.0 * (1 - p["mixing_weight"].as<double>()))) < 1e-9);
     mixing.update(2, 0, h0, ovlp, g, sigma_1, sigma_t);
     std::filesystem::remove(res_file_1);
     std::filesystem::remove(mix_file_1);
@@ -350,7 +359,7 @@ TEST_CASE("Mixing") {
     std::string mix_file_1 = random_name();
     std::string args_1 =
         "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=DIIS --diis_start 1 "s +
-        "--damping 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
+        "--mixing_weight 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
     green::sc::define_parameters(p);
     green::grids::define_parameters(p);
     p.parse(args_1);
@@ -384,7 +393,7 @@ TEST_CASE("Mixing") {
     std::string mix_file_1 = random_name();
     std::string args_1 =
         "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=CDIIS --diis_start 1 "s +
-        "--damping 0.5 --verbose 1 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
+        "--mixing_weight 0.5 --verbose 1 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
     green::sc::define_parameters(p);
     green::grids::define_parameters(p);
     p.parse(args_1);
@@ -418,7 +427,7 @@ TEST_CASE("Mixing") {
     std::string mix_file_1 = random_name();
     std::string args_1 =
         "test --BETA 100 --grid_file ir/1e4.h5 --restart 0 --itermax 4 --E_thr 1e-13 --mixing_type=CDIIS --diis_start 1 "s +
-        "--damping 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
+        "--mixing_weight 0.5 --results_file="s + res_file_1 + " --diis_file " + mix_file_1;
     green::sc::define_parameters(p);
     green::grids::define_parameters(p);
     p.parse(args_1);

@@ -66,7 +66,7 @@ namespace green::sc {
     bool _restart;
     // Dyson Equation solver
     DysonSolver _dyson_solver;
-    // DIIS or simple damping object
+    // DIIS or simple mixing object
     mixing_strategy<G, S1, St> _mix;
     // MPI
     utils::mpi_context _context;
