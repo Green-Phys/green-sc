@@ -63,7 +63,7 @@ namespace green::sc {
   }
 
   inline void define_parameters(params::params& p) {
-    p.define<mixing_type>("mixing_type", "Type of iteration convergence mixing. We use no mixing by default", SIGMA_MIXING);
+    p.define<mixing_type>("mixing_type", "Type of iteration convergence mixing. We use self-energy mixing by default", SIGMA_MIXING);
     p.define<double>("mixing_weight,mixing_alpha",
                      "Simple mixing parameters between current ad previous iteration: X_n = mixing_weight X_n + (1-mixing_weight) X_{n-1}."
                      " Should be between 0 and 2.",
