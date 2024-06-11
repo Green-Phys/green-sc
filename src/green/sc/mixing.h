@@ -263,7 +263,7 @@ namespace green::sc {
   class mixing_strategy {
   public:
     explicit mixing_strategy(const params::params& p) : _mixing(nullptr), _verbose(p["verbose"]) {
-      if (p["damping"].is_set()) {
+      if (p.is_set("damping")) {
         throw sc_incorrect_mixing_error(
             "Parameter `--damping` was provided, please use `--mixing_weight` parameter instead. "
             "We use the following definition: X_n = a X_n + (1-a) X_{n-1}, where `a` is set by `--mixing_weight`.");
