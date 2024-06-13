@@ -27,7 +27,7 @@ namespace green::sc {
   /**
    *
    */
-  enum mixing_type { NO_MIXING, G_DAMPING, SIGMA_DAMPING, DIIS, CDIIS };
+  enum mixing_type { NO_MIXING, G_MIXING, SIGMA_MIXING, DIIS, CDIIS };
   // Tensor types
   template <typename prec, size_t Dim>
   using tensor = green::ndarray::ndarray<prec, Dim>;
@@ -63,11 +63,12 @@ namespace green::sc {
   }
 
   inline void define_parameters(params::params& p) {
-    p.define<mixing_type>("mixing_type", "Type of iteration convergence mixing. We use no mixing by default", SIGMA_DAMPING);
-    p.define<double>("damping",
-                     "Simple mixing paramters between current ad previous iteration. Should be between 0 and 1: 1 - no damping (direct Roothaan steps), "
-                     "0 - full damping (and no update).",
+    p.define<mixing_type>("mixing_type", "Type of iteration convergence mixing. We use self-energy mixing by default", SIGMA_MIXING);
+    p.define<double>("mixing_weight,mixing_alpha",
+                     "Simple mixing parameters between current ad previous iteration: X_n = mixing_weight X_n + (1-mixing_weight) X_{n-1}."
+                     " Should be between 0 and 2.",
                      0.7);
+    p.define<double>("damping", "This parameter exists for legacy purpose and should never be set. If this parameter is set exception will be thrown.");
     p.define<int>("diis_start", "Iteration number when we start using DIIS", 2);
     p.define<int>("diis_size", "Size of DIIS subspace", 3);
     p.define<std::string>("diis_file", "File to store results", "diis.h5");

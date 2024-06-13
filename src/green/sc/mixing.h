@@ -82,11 +82,17 @@ namespace green::sc {
    * @tparam St
    */
   template <typename G, typename S1, typename St>
-  class g_damping : public base_mixing<G, S1, St> {
+  class g_mixing : public base_mixing<G, S1, St> {
   public:
-    g_damping(double d, const std::string& res) : _damping(d), _results_file(res) {
-      if (d <= 0.0 || d > 1.0) {
-        throw sc_incorrect_damping_error("Damping should be in (0,1] interval");
+    g_mixing(double m, const std::string& res) : _mixing_weight(m), _results_file(res) {
+      if (m <= 0.0 || m >= 2.0) {
+        throw sc_incorrect_mixing_error("Mixing should be in (0,2) interval");
+      }
+      if (m > 1) {
+        if (utils::context.global_rank == 0)
+          std::cout << "Mixing parameter is set to be bigger than one, in the over-relaxation regime convergence potentially can "
+                       "be unstable."
+                    << std::endl;
       }
     }
     void update(size_t iter, double, const S1&, const S1&, G& g, S1&, St&) override {
@@ -95,27 +101,33 @@ namespace green::sc {
       }
       G g_tmp(internal::init_data(g));
       internal::read_data(g_tmp, _results_file, "iter" + std::to_string(iter - 1) + "/G_tau/data");
-      internal::update(g, g_tmp, _damping);
+      internal::update(g, g_tmp, _mixing_weight);
       internal::cleanup_data(g_tmp);
     };
 
     void print_name() override {
       if (utils::context.global_rank == 0)
-        std::cout << "Green's function mixing strategy will be applied: " << _damping << "*G_new + " << (1 - _damping) << "*G_old"
-                  << std::endl;
+        std::cout << "Green's function mixing strategy will be applied: " << _mixing_weight << "*G_new + " << (1 - _mixing_weight)
+                  << "*G_old" << std::endl;
     }
 
   private:
-    double      _damping;
+    double      _mixing_weight;
     std::string _results_file;
   };
 
   template <typename G, typename S1, typename St>
-  class sigma_damping : public base_mixing<G, S1, St> {
+  class sigma_mixing : public base_mixing<G, S1, St> {
   public:
-    sigma_damping(double d, const std::string& res) : _damping(d), _results_file(res) {
-      if (d <= 0.0 || d > 1.0) {
-        throw sc_incorrect_damping_error("Damping should be in (0,1] interval");
+    sigma_mixing(double m, const std::string& res) : _mixing_weight(m), _results_file(res) {
+      if (m <= 0.0 || m >= 2.0) {
+        throw sc_incorrect_mixing_error("Mixing should be in (0,2) interval");
+      }
+      if (m > 1) {
+        if (utils::context.global_rank == 0)
+          std::cout << "Mixing parameter is set to be bigger than one, in the over-relaxation regime convergence potentially can "
+                       "be unstable."
+                    << std::endl;
       }
     }
     void update(size_t iter, double, const S1&, const S1&, G&, S1& s1, St& s_t) override {
@@ -124,22 +136,22 @@ namespace green::sc {
       }
       St st_tmp(internal::init_data(s_t));
       internal::read_data(st_tmp, _results_file, "iter" + std::to_string(iter - 1) + "/Selfenergy/data");
-      internal::update(s_t, st_tmp, _damping);
+      internal::update(s_t, st_tmp, _mixing_weight);
       internal::cleanup_data(st_tmp);
       S1 s1_tmp(internal::init_data(s1));
       internal::read_data(s1_tmp, _results_file, "iter" + std::to_string(iter - 1) + "/Sigma1");
-      internal::update(s1, s1_tmp, _damping);
+      internal::update(s1, s1_tmp, _mixing_weight);
       internal::cleanup_data(s1_tmp);
     };
 
     void print_name() override {
       if (utils::context.global_rank == 0)
-        std::cout << "Self-energy mixing strategy will be applied: " << _damping << "*Sigma_new + " << (1 - _damping)
+        std::cout << "Self-energy mixing strategy will be applied: " << _mixing_weight << "*Sigma_new + " << (1 - _mixing_weight)
                   << "*Sigma_old" << std::endl;
     }
 
   private:
-    double      _damping;
+    double      _mixing_weight;
     std::string _results_file;
   };
 
@@ -150,7 +162,7 @@ namespace green::sc {
    * @tparam St
    */
   template <typename G, typename S1, typename St>
-  class diis : public sigma_damping<G, S1, St> {
+  class diis : public sigma_mixing<G, S1, St> {
     using vec_t       = opt::fock_sigma<S1, St>;
     using problem_t   = opt::shared_optimization_problem<vec_t>;
     using vec_space_t = opt::vector_space_fock_sigma<S1, St>;
@@ -158,7 +170,7 @@ namespace green::sc {
 
   public:
     diis(const params::params& p, bool commutator) :
-        sigma_damping<G, S1, St>(p["damping"], p["results_file"]), _damping(p["damping"]), _results_file(p["results_file"]),
+        sigma_mixing<G, S1, St>(p["mixing_weight"], p["results_file"]), _mixing(p["mixing_weight"]), _results_file(p["results_file"]),
         _diis_file(p["diis_file"]), _diis_start(p["diis_start"]), _diis_size(p["diis_size"]),
         _diis(_diis_start, _diis_size, p["verbose"]), _x_vsp(_diis_file, _diis_size + 1),
         _res_vsp(_diis_file, _diis_size, "residuals"), _ft(p), _commutator(commutator) {
@@ -208,7 +220,7 @@ namespace green::sc {
         return;
       }
       if (iter <= _diis_start) {
-        sigma_damping<G, S1, St>::update(iter, mu, h0, ovlp, g, s1, s_t);
+        sigma_mixing<G, S1, St>::update(iter, mu, h0, ovlp, g, s1, s_t);
         internal::assign(problem.x().get_fock(), s1);
         internal::assign(problem.x().get_sigma(), s_t);
       }
@@ -227,7 +239,7 @@ namespace green::sc {
     };
 
   private:
-    double               _damping;
+    double               _mixing;
     std::string          _results_file;
     std::string          _diis_file;
     size_t               _diis_start;
@@ -251,15 +263,20 @@ namespace green::sc {
   class mixing_strategy {
   public:
     explicit mixing_strategy(const params::params& p) : _mixing(nullptr), _verbose(p["verbose"]) {
+      if (p.is_set("damping")) {
+        throw sc_incorrect_mixing_error(
+            "Parameter `--damping` was provided, please use `--mixing_weight` parameter instead. "
+            "We use the following definition: X_n = a X_n + (1-a) X_{n-1}, where `a` is set by `--mixing_weight`.");
+      }
       switch (p["mixing_type"].as<mixing_type>()) {
         case NO_MIXING:
           _mixing = std::make_unique<no_mixing<G, S1, St>>();
           break;
-        case G_DAMPING:
-          _mixing = std::make_unique<g_damping<G, S1, St>>(p["damping"], p["results_file"]);
+        case G_MIXING:
+          _mixing = std::make_unique<g_mixing<G, S1, St>>(p["mixing_weight"], p["results_file"]);
           break;
-        case SIGMA_DAMPING:
-          _mixing = std::make_unique<sigma_damping<G, S1, St>>(p["damping"], p["results_file"]);
+        case SIGMA_MIXING:
+          _mixing = std::make_unique<sigma_mixing<G, S1, St>>(p["mixing_weight"], p["results_file"]);
           break;
         case DIIS:
           _mixing = std::make_unique<diis<G, S1, St>>(p, false);
