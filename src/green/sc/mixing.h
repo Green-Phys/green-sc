@@ -175,7 +175,6 @@ namespace green::sc {
         _diis(_diis_start, _diis_size, p["verbose"]), _x_vsp(_diis_file, _diis_size + 1),
         _res_vsp(_diis_file, _diis_size, "residuals"), _ft(p), _commutator(commutator) {
       if (!p["restart"].as<bool>() || !p["diis_restart"].as<bool>()) {
-        std::cout<<"restarts: "<<p["restart"].as<bool>()<<" "<<p["diis_restart"].as<bool>()<<std::endl;
         MPI_Barrier(utils::context.global);
         if (!utils::context.global_rank) std::filesystem::remove(_diis_file);
         MPI_Barrier(utils::context.global);
