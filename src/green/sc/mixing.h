@@ -175,16 +175,21 @@ namespace green::sc {
         _diis(_diis_start, _diis_size, p["verbose"]), _x_vsp(_diis_file, _diis_size + 1),
         _res_vsp(_diis_file, _diis_size, "residuals"), _ft(p), _commutator(commutator) {
       if (!p["restart"].as<bool>() || !p["diis_restart"].as<bool>()) {
+        std::cout<<"restarts: "<<p["restart"].as<bool>()<<" "<<p["diis_restart"].as<bool>()<<std::endl;
+        MPI_Barrier(utils::context.global);
         if (!utils::context.global_rank) std::filesystem::remove(_diis_file);
         MPI_Barrier(utils::context.global);
+        _need_reinit = false;
         return;
       }
-      if (!_res_vsp.restore() || _x_vsp.restore()) {
+      if (!_res_vsp.restore() || !_x_vsp.restore()) {
+        MPI_Barrier(utils::context.global);
         if (!utils::context.global_rank) std::filesystem::remove(_diis_file);
         MPI_Barrier(utils::context.global);
+        _need_reinit = false;
         return;
       }
-      _diis.reinit(_res_vsp);
+      _need_reinit = true;
     }
 
     void update(size_t iter, double mu, const S1& h0, const S1& ovlp, G& g, S1& s1, St& s_t) override {
@@ -196,6 +201,10 @@ namespace green::sc {
       auto  res_j = vec_j;
       _x_vsp.init(vec_i, vec_j);
       _res_vsp.init(res_i, res_j);
+      if(_need_reinit) {
+        _diis.reinit(_res_vsp);
+        _need_reinit = false;
+      }
       problem_t  problem(vec);
       residual_t residual;
       if (_commutator) {
@@ -249,6 +258,7 @@ namespace green::sc {
     vec_space_t          _res_vsp;
     grids::transformer_t _ft;
     bool                 _commutator;
+    bool                 _need_reinit;
     residual_t           _residual;
   };
 

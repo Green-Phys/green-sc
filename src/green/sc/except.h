@@ -25,12 +25,12 @@
 
 namespace green::sc {
 
-  class sc_incorrect_mixing_error : std::runtime_error {
+  class sc_incorrect_mixing_error : public std::runtime_error {
   public:
     explicit sc_incorrect_mixing_error(const std::string& what) : std::runtime_error(what) {}
   };
 
-  class sc_diis_vsp_error : std::runtime_error {
+  class sc_diis_vsp_error : public std::runtime_error {
   public:
     explicit sc_diis_vsp_error(const std::string& what) : std::runtime_error(what) {}
   };
