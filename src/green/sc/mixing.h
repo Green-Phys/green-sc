@@ -48,10 +48,10 @@ namespace green::sc {
   public:
     /**
      * Method that mix result from current iteration with results from previous iterations.
-     * Various stratagise can be implemented, such simple damping on Green's function or self-energy,
+     * Various strategies can be implemented, such simple damping on Green's function or self-energy,
      * DIIS and so on.
      *
-     * @param iter - current relative iteration
+     * @param iter - current iteration
      * @param mu - chemical potential
      * @param ovlp - overlap matrix
      * @param g - Green's function for the current iteration
@@ -96,7 +96,7 @@ namespace green::sc {
       }
     }
     void update(size_t iter, double, const S1&, const S1&, G& g, S1&, St&) override {
-      if (iter == 0) {
+      if (iter == 1) {
         return;
       }
       G g_tmp(internal::init_data(g));
@@ -131,7 +131,7 @@ namespace green::sc {
       }
     }
     void update(size_t iter, double, const S1&, const S1&, G&, S1& s1, St& s_t) override {
-      if (iter == 0) {
+      if (iter == 1) {
         return;
       }
       St st_tmp(internal::init_data(s_t));
@@ -221,19 +221,19 @@ namespace green::sc {
           add(res, problem.x(), last, -1.0);
         };
       }
-      if (iter == 0) {
+      if (iter == 1) {
         _diis.next_step(vec, res, _x_vsp, _res_vsp, residual, problem);
         _x_vsp.reset();
         _res_vsp.reset();
         return;
       }
-      if (iter <= _diis_start) {
+      if (iter - 1 <= _diis_start) {
         sigma_mixing<G, S1, St>::update(iter, mu, h0, ovlp, g, s1, s_t);
         internal::assign(problem.x().get_fock(), s1);
         internal::assign(problem.x().get_sigma(), s_t);
       }
       _diis.next_step(vec, res, _x_vsp, _res_vsp, residual, problem);
-      if (iter > _diis_start) {
+      if (iter - 1 > _diis_start) {
         internal::assign(s1, problem.x().get_fock());
         internal::assign(s_t, problem.x().get_sigma());
       }
@@ -298,8 +298,7 @@ namespace green::sc {
 
     /**
      * Based on the chosen strategy mix result from current iteration with results from previous iterations.
-     * @param iter
-     * @param iter - current relative iteration
+     * @param iter - current iteration
      * @param mu - chemical potential
      * @param h0 - non-interacting hamiltonian
      * @param ovlp - overlap matrix

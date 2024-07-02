@@ -308,8 +308,8 @@ TEST_CASE("Mixing") {
     green::sc::define_parameters(p);
     p.parse(args_1);
     green::h5pp::archive ar(res_file_1, "w");
-    ar["iter0/Sigma1"] << 2.0;
-    ar["iter0/Selfenergy/data"] << 1.0;
+    ar["iter1/Sigma1"] << 2.0;
+    ar["iter1/Selfenergy/data"] << 1.0;
     ar.close();
     double   h0      = 0;
     double   ovlp    = 0;
@@ -317,7 +317,7 @@ TEST_CASE("Mixing") {
     double   sigma_1 = 0.0;
     double   sigma_t = 0.0;
     mixing_t mixing(p);
-    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(2, 0, h0, ovlp, g, sigma_1, sigma_t);
     REQUIRE(std::abs(sigma_1 - 2.0 * p["mixing_weight"].as<double>()) < 1e-9);
     REQUIRE(std::abs(sigma_t - 1.0 * p["mixing_weight"].as<double>()) < 1e-9);
     std::filesystem::remove(res_file_1);
@@ -339,17 +339,17 @@ TEST_CASE("Mixing") {
     double   sigma_1(1.0);
     double   sigma_t(2.0);
     mixing_t mixing(p);
-    mixing.update(0, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
     green::h5pp::archive ar(res_file_1, "w");
-    ar["iter0/Sigma1"] << sigma_1;
-    ar["iter0/Selfenergy/data"] << sigma_t;
+    ar["iter1/Sigma1"] << sigma_1;
+    ar["iter1/Selfenergy/data"] << sigma_t;
     ar.close();
     sigma_1 = 0.5;
     sigma_t = 1.0;
-    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(2, 0, h0, ovlp, g, sigma_1, sigma_t);
     REQUIRE(std::abs(sigma_1 - (1.0 * p["mixing_weight"].as<double>() + 0.5 * (1 - p["mixing_weight"].as<double>()))) < 1e-9);
     REQUIRE(std::abs(sigma_t - (2.0 * p["mixing_weight"].as<double>() + 1.0 * (1 - p["mixing_weight"].as<double>()))) < 1e-9);
-    mixing.update(2, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(3, 0, h0, ovlp, g, sigma_1, sigma_t);
     std::filesystem::remove(res_file_1);
     std::filesystem::remove(mix_file_1);
   }
@@ -373,17 +373,17 @@ TEST_CASE("Mixing") {
     S1       sigma_1(2, 3, 4, 4);
     St       sigma_t(1, 2, 3, 4, 4);
     mixing_t mixing(p);
-    mixing.update(0, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
     green::h5pp::archive ar(res_file_1, "w");
-    ar["iter0/Sigma1"] << sigma_1;
-    ar["iter0/Selfenergy/data"] << sigma_t.object();
+    ar["iter1/Sigma1"] << sigma_1;
+    ar["iter1/Selfenergy/data"] << sigma_t.object();
     ar.close();
     sigma_1.set_value(0.5);
     sigma_t.fence();
     sigma_t.object().set_value(0.5);
     sigma_t.fence();
-    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
     mixing.update(2, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(3, 0, h0, ovlp, g, sigma_1, sigma_t);
     std::filesystem::remove(res_file_1);
     std::filesystem::remove(mix_file_1);
   }
@@ -407,17 +407,17 @@ TEST_CASE("Mixing") {
     S1       sigma_1(2, 3, 4, 4);
     St       sigma_t(110, 2, 3, 4, 4);
     mixing_t mixing(p);
-    mixing.update(0, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
     green::h5pp::archive ar(res_file_1, "w");
-    ar["iter0/Sigma1"] << sigma_1;
-    ar["iter0/Selfenergy/data"] << sigma_t.object();
+    ar["iter1/Sigma1"] << sigma_1;
+    ar["iter1/Selfenergy/data"] << sigma_t.object();
     ar.close();
     sigma_1.set_value(0.5);
     sigma_t.fence();
     sigma_t.object().set_value(0.5);
     sigma_t.fence();
-    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
     mixing.update(2, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(3, 0, h0, ovlp, g, sigma_1, sigma_t);
     std::filesystem::remove(res_file_1);
     std::filesystem::remove(mix_file_1);
   }
@@ -441,15 +441,15 @@ TEST_CASE("Mixing") {
     S1       sigma_1(2, 3, 4, 4);
     St       sigma_t(110, 2, 3, 4, 4);
     mixing_t mixing(p);
-    mixing.update(0, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
     green::h5pp::archive ar(res_file_1, "w");
-    ar["iter0/Sigma1"] << sigma_1;
-    ar["iter0/Selfenergy/data"] << sigma_t;
+    ar["iter1/Sigma1"] << sigma_1;
+    ar["iter1/Selfenergy/data"] << sigma_t;
     ar.close();
     sigma_1.set_value(0.5);
     sigma_t.set_value(0.5);
-    mixing.update(1, 0, h0, ovlp, g, sigma_1, sigma_t);
     mixing.update(2, 0, h0, ovlp, g, sigma_1, sigma_t);
+    mixing.update(3, 0, h0, ovlp, g, sigma_1, sigma_t);
     std::filesystem::remove(res_file_1);
     std::filesystem::remove(mix_file_1);
   }

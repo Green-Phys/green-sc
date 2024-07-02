@@ -90,7 +90,7 @@ namespace green::sc {
      */
     template <typename Solver>
     void solve(Solver& solver, const S1& h0, const S1& ovlp, G& g0_tau, S1& sigma1, St& sigma_tau) {
-      size_t         start_iter = 0, iter = 0;
+      size_t         start_iter = 1, iter = 0;
       utils::timing& t = utils::timing::get_instance();
       t.start("Read results");
       if (_restart) {
@@ -111,7 +111,7 @@ namespace green::sc {
       for (_iter = start_iter, iter = 0; iter < _itermax; ++iter, ++_iter) {
         if (!_context.global_rank) {
           std::cout << std::endl;
-          std::cout << "========== Starting iteration " << _iter + 1 << " out of " << _itermax + start_iter
+          std::cout << "========== Starting iteration " << _iter << " out of " << _itermax + start_iter
                     << " ==========" << std::endl;
         }
         t.start("Diagrammatic solver");
