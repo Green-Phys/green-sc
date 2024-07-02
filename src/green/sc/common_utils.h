@@ -249,11 +249,11 @@ namespace green::sc {
   template <typename G, typename S1, typename St>
   size_t read_results(double & mu, G& g_tau, S1& sigma_1, St& sigma_tau, const std::string& results_file) {
     if (!std::filesystem::exists(results_file)) {
-      return 0;
+      return 1;
     }
     h5pp::archive ar(results_file);
     if (!h5pp::dataset_exists(ar.current_id(), "iter")) {
-      return 0;
+      return 1;
     }
     size_t iter;
     ar["iter"] >> iter;
