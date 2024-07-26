@@ -28,6 +28,8 @@
 #include <green/utils/mpi_utils.h>
 #include <green/utils/timing.h>
 #include <mpi.h>
+#include <cuda_profiler_api.h>
+#include <cudaProfiler.h>
 
 #include <cstdio>
 #include <fstream>
@@ -115,7 +117,9 @@ namespace green::sc {
                     << " ==========" << std::endl;
         }
         t.start("Diagrammatic solver");
+        cudaProfilerStart();
         solver.solve(g0_tau, sigma1, sigma_tau);
+        cudaProfilerStop();
         t.end();
         t.start("Iteration mixing");
         _mix.update(_iter, _dyson_solver.mu(), h0, ovlp, g0_tau, sigma1, sigma_tau);
