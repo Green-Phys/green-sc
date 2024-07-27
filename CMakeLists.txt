@@ -26,6 +26,9 @@ endif ()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+find_package(CUDAToolkit REQUIRED)
+enable_language("CUDA")
+
 include(GreenDeps)
 
 add_green_dependency(green-grids)
