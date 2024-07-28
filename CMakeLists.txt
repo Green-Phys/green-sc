@@ -26,6 +26,19 @@ endif ()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# CUDA for debugging and profiling
+find_package(CUDAToolkit REQUIRED)
+enable_language("CUDA")
+include(CheckLanguage)
+check_language(CUDA)
+include(CudaArchitectures)
+define_cuda_architectures()
+add_compile_definitions(WITH_CUDA)
+if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
+
 include(GreenDeps)
 
 add_green_dependency(green-grids)
