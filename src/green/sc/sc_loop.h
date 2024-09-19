@@ -30,6 +30,7 @@
 #include <mpi.h>
 #include <cuda_profiler_api.h>
 #include <cudaProfiler.h>
+#include <nvtx3/nvtx3.hpp>
 
 #include <cstdio>
 #include <fstream>
@@ -110,6 +111,7 @@ namespace green::sc {
       t.start("Dyson");
       _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
       t.end();
+      cudaProfilerStart();
       for (_iter = start_iter, iter = 0; iter < _itermax; ++iter, ++_iter) {
         if (!_context.global_rank) {
           std::cout << std::endl;
@@ -117,22 +119,24 @@ namespace green::sc {
                     << " ==========" << std::endl;
         }
         t.start("Diagrammatic solver");
-        cudaProfilerStart();
         solver.solve(g0_tau, sigma1, sigma_tau);
-        cudaProfilerStop();
         t.end();
+        nvtx3::nvtxRangePushA("DIIS, mxing and Dyson");
         t.start("Iteration mixing");
         _mix.update(_iter, _dyson_solver.mu(), h0, ovlp, g0_tau, sigma1, sigma_tau);
         t.end();
+        nvtx3::nvtxRangePop();
         t.start("Check convergence");
         double diff = _dyson_solver.diff(g0_tau, sigma1, sigma_tau);
         t.end();
         // store results from current iteration
+        nvtx3::nvtxRangePushA("store output");
         t.start("Store results");
         if (!_context.global_rank) {
           dump_iteration(_iter, g0_tau, sigma1, sigma_tau);
           _dyson_solver.dump_iteration(_iter, g0_tau, sigma1, sigma_tau, _results_file);
         }
+        nvtx3::nvtxRangePop();
         t.end();
         if (!_context.global_rank) {
           std::stringstream ss;
@@ -149,6 +153,7 @@ namespace green::sc {
         _dyson_solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
       }
+      cudaProfilerStop();
       if (!_context.global_rank && iter == _itermax)
         std::cout << "====== Reached Maximum number of iterations ======" << std::endl;
       t.end();
