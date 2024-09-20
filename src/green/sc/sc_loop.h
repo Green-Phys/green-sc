@@ -30,7 +30,6 @@
 #include <mpi.h>
 #include <cuda_profiler_api.h>
 #include <cudaProfiler.h>
-#include <nvtx3/nvtx3.hpp>
 
 #include <cstdio>
 #include <fstream>
@@ -121,25 +120,19 @@ namespace green::sc {
         t.start("Diagrammatic solver");
         solver.solve(g0_tau, sigma1, sigma_tau);
         t.end();
-        {
-          nvtx3::scoped_range diis_nvtx{"DIIS, mixing and Dyson"};
-          t.start("Iteration mixing");
-          _mix.update(_iter, _dyson_solver.mu(), h0, ovlp, g0_tau, sigma1, sigma_tau);
-          t.end();
-        }
+        t.start("Iteration mixing");
+        _mix.update(_iter, _dyson_solver.mu(), h0, ovlp, g0_tau, sigma1, sigma_tau);
+        t.end();
         t.start("Check convergence");
         double diff = _dyson_solver.diff(g0_tau, sigma1, sigma_tau);
         t.end();
         // store results from current iteration
-        {
-          nvtx3::scoped_range output_nvtx{"Save output"};
-          t.start("Store results");
-          if (!_context.global_rank) {
-            dump_iteration(_iter, g0_tau, sigma1, sigma_tau);
-            _dyson_solver.dump_iteration(_iter, g0_tau, sigma1, sigma_tau, _results_file);
-          }
-          t.end();
+        t.start("Store results");
+        if (!_context.global_rank) {
+          dump_iteration(_iter, g0_tau, sigma1, sigma_tau);
+          _dyson_solver.dump_iteration(_iter, g0_tau, sigma1, sigma_tau, _results_file);
         }
+        t.end();
         if (!_context.global_rank) {
           std::stringstream ss;
           ss << std::scientific << std::setprecision(15);
