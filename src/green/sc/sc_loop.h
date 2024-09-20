@@ -30,7 +30,7 @@
 #include <mpi.h>
 #include <cuda_profiler_api.h>
 #include <cudaProfiler.h>
-#include <nvtx3/nvtx3.hpp>>
+#include <nvtx3/nvtx3.hpp>
 
 #include <cstdio>
 #include <fstream>
