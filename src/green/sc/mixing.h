@@ -311,6 +311,18 @@ namespace green::sc {
       _mixing->update(iter, mu, h0, ovlp, g, s1, s_t);
     }
 
+   
+    /**
+     * Scaling of the dynamical part of self-energy
+     * @param s_t - dynamic self-energy for the current iteration
+     * @param scaling_parameter - magnitude of scaling
+     */
+    virtual void sigma_scale(St& s_t, double scaling_parameter)  {
+        if(scaling_parameter != 1.0) {
+            internal::scale(s_t, scaling_parameter);
+        }
+    }
+
   private:
     std::unique_ptr<base_mixing<G, S1, St>> _mixing;
     int                                     _verbose;

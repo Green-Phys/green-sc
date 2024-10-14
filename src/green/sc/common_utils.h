@@ -79,6 +79,19 @@ namespace green::sc::internal {
     obj_n += obj_n_1 * (1.0 - mixing_weight);
   }
 
+  /**
+   * Scale object (obj_n) with a weight scaling_parameter
+   * obj_n = obj_n * scaling_parameter 
+   *
+   * @tparam T - type of object
+   * @param obj_n - result for current iteration
+   * @param scaling_parameter - scaling parameter
+   */
+  template <typename T>
+  void scale(T& obj_n, double scaling_parameter) {
+    obj_n *= scaling_parameter;
+  }
+
   template <typename T, size_t N, typename C>
   utils::shared_object<tensor<T, N>>& operator*=(utils::shared_object<tensor<T, N>>& lhs, C rhs) {
     lhs.fence();
@@ -199,6 +212,23 @@ namespace green::sc::internal {
     if (!utils::context.node_rank) {
       obj_n.object() *= mixing_weight;
       obj_n.object() += obj_n_1.object() * (1.0 - mixing_weight);
+    }
+    obj_n.fence();
+  }
+
+  /**
+   * Shared memory version of scale function
+   * Scale object (obj_n) with a weight alpha 
+   * obj_n = obj_n * scaling_parameter 
+   *
+   * @tparam T - type of object
+   * @param obj_n - result for current iteration
+   * @param scaling_parameter - scaling parameter
+   */
+  inline void scale(utils::shared_object<ztensor<5>>& obj_n, double scaling_parameter) {
+    obj_n.fence();
+    if (!utils::context.node_rank) {
+      obj_n.object() *= scaling_parameter;
     }
     obj_n.fence();
   }

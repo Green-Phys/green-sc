@@ -64,6 +64,8 @@ namespace green::sc {
     std::string _results_file;
     // Restart calculation from existing Self-energy
     bool _restart;
+    // Scaling weight
+    double _scaling_param;
     // Dyson Equation solver
     DysonSolver _dyson_solver;
     // DIIS or simple mixing object
@@ -74,7 +76,7 @@ namespace green::sc {
   public:
     sc_loop(MPI_Comm comm, params::params& p) :
         _itermax(p["itermax"]), _iter(0), _e_thr(p["threshold"]), _e_thr_sp(p["E_thr_sp"]), _input_path(p["input_file"]),
-        _results_file(p["results_file"]), _restart(p["restart"]), _dyson_solver(p), _mix(p), _context(comm) {}
+        _results_file(p["results_file"]), _restart(p["restart"]), _scaling_param(p["scaling"]), _dyson_solver(p), _mix(p), _context(comm) {}
 
     virtual ~sc_loop() = default;
 
@@ -116,6 +118,9 @@ namespace green::sc {
         }
         t.start("Diagrammatic solver");
         solver.solve(g0_tau, sigma1, sigma_tau);
+        t.end();
+        t.start("Scaling of dynamical self-energy");
+        _mix.sigma_scale(sigma_tau, _scaling_param);
         t.end();
         t.start("Iteration mixing");
         _mix.update(_iter, _dyson_solver.mu(), h0, ovlp, g0_tau, sigma1, sigma_tau);
