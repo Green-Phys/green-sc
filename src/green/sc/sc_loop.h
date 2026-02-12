@@ -27,6 +27,7 @@
 #include <green/params/params.h>
 #include <green/utils/mpi_utils.h>
 #include <green/utils/timing.h>
+#include <green/grids/common_defs.h>
 #include <mpi.h>
 
 #include <cstdio>
@@ -37,6 +38,7 @@
 #include "common_defs.h"
 #include "mixing.h"
 #include "solver.h"
+#include "except.h"
 
 namespace green::sc {
   /**
@@ -74,7 +76,12 @@ namespace green::sc {
   public:
     sc_loop(MPI_Comm comm, params::params& p) :
         _itermax(p["itermax"]), _iter(0), _e_thr(p["threshold"]), _e_thr_sp(p["E_thr_sp"]), _input_path(p["input_file"]),
-        _results_file(p["results_file"]), _restart(p["restart"]), _dyson_solver(p), _mix(p), _context(comm) {}
+        _results_file(p["results_file"]), _restart(p["restart"]), _dyson_solver(p), _mix(p), _context(comm) {
+      if (_restart) {
+        check_grids_version_consistency();
+      }
+      
+    }
 
     virtual ~sc_loop() = default;
 
@@ -164,11 +171,56 @@ namespace green::sc {
      */
     void dump_iteration(size_t iter, G& g_tau, S1& sigma_1, St& sigma_tau) const {
       h5pp::archive ar(_results_file, "a");
+      if (!ar.has_attribute("__grids_version__")) {
+        // Grids attribute -- will only be performed once
+        std::string grid_version = _dyson_solver.ft().get_version();
+        ar.set_attribute<std::string>("__grids_version__", grid_version);
+      }
       ar["iter"] << iter;
       internal::write(sigma_1, "iter" + std::to_string(iter) + "/Sigma1", ar);
       internal::write(sigma_tau, "iter" + std::to_string(iter) + "/Selfenergy/data", ar);
       internal::write(g_tau, "iter" + std::to_string(iter) + "/G_tau/data", ar);
       ar.close();
+    }
+
+    /**
+     * @brief Checks consistency between grid-file version used in current run vs. the version
+     * used to generate the results file that is being restarted from.
+     * This is to prevent users from accidentally restarting from a results file that was generated with
+     * an older version of green-grids, which can lead to silent errors in the results.
+     * 
+     * 1. If the results file does not have a green-grids version attribute, then check if current version is 0.2.4 (BASE VERSION)
+     * 2. If the results file has a green-grids version attribute, check if it >= 0.2.4
+     */
+    void check_grids_version_consistency() {
+      // If results file does not exist, nothing to check
+      if (!std::filesystem::exists(_results_file)) return;
+
+      // Read grid-file version
+      std::string grid_file_version = _dyson_solver.ft().get_version();
+
+      h5pp::archive ar(_results_file, "r");
+      if (ar.has_attribute("__grids_version__")) {
+        std::string grids_version_in_results;
+        grids_version_in_results = ar.get_attribute<std::string>("__grids_version__");
+        ar.close();
+        if (grid_file_version < grids_version_in_results) {
+          throw green::grids::outdated_grids_file_error("The current green-grids version (" + grid_file_version +
+                                            ") is older than the green-grids version used to create the original results file ("
+                                            + grids_version_in_results +
+                                            "). Please update green-grids to version " + grids_version_in_results);
+        } else if (grid_file_version > grids_version_in_results) {
+          throw outdated_results_file_error("The green-grids version used to create the results file (" + grids_version_in_results +
+                                            ") is older than the minimum required green-grids version (" + green::grids::GRIDS_MIN_VERSION +
+                                            "). Please use old grid files from: " +
+                                            "https://github.com/Green-Phys/green-grids/releases/tag/v0.2.4.");
+        }
+      } else if (grid_file_version > green::grids::GRIDS_MIN_VERSION) {
+        ar.close();
+        throw outdated_results_file_error("The results file was created using un-versioned grid file (equiv. to " + green::grids::GRIDS_MIN_VERSION +
+                                          ") and the current green-grids version (" + grid_file_version + ") is newer than 0.2.4.\n" + 
+                                          "Please use old grid files from: https://github.com/Green-Phys/green-grids/releases/tag/v0.2.4.");
+      }
     }
 
     DysonSolver& dyson_solver() { return _dyson_solver; }

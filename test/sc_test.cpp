@@ -51,7 +51,7 @@ public:
   using Sigma1    = double;
   using Sigma_tau = double;
 
-  fourth_power_equation_dyson(green::params::params& p) : _alpha(p["alpha"]), _beta(p["beta"]) {}
+  fourth_power_equation_dyson(green::params::params& p) : _alpha(p["alpha"]), _beta(p["beta"]), _ft(p) {}
 
   void solve(G& g, Sigma1& sigma1, Sigma_tau& sigma_tau) {
     double g_new = _alpha + _alpha * (sigma1 + sigma_tau) * g;
@@ -60,14 +60,16 @@ public:
   }
   double diff(const G&, const Sigma1&, const Sigma_tau&) { return _diff; }
   void   dump_iteration(size_t, const G&, const Sigma1&, const Sigma_tau&, const std::string&) {};
-  double mu() const { return 0; }
+  double mu() const { return _mu; }
   double& mu() { return _mu; }
+  const green::grids::transformer_t& ft() const { return _ft; }
 
 private:
   double _alpha;
   double _beta;
   double _diff;
   double _mu;
+  green::grids::transformer_t _ft;
 };
 
 class fourth_power_equation_solver {
@@ -102,8 +104,9 @@ void solve_with_mixing(const std::string& mixing_type, const std::string& mixing
   auto        p        = green::params::params("DESCR");
   std::string res_file = random_name();
   std::string args     = "test --restart 0 --itermax 1000 --E_thr 1e-13 --mixing_type " + mixing_type + " --mixing_weight " + mixing_weight +
-                     " --verbose 1 --results_file=" + res_file;
+                     " --verbose 1 --results_file=" + res_file + " --grid_file ir/1e4.h5 --BETA 100";
   green::sc::define_parameters(p);
+  green::grids::define_parameters(p);
   p.define<double>("alpha", "", 0.45);
   p.define<double>("beta", "", 0.5);
   p.define<double>("gamma", "", 0.25);
@@ -150,8 +153,10 @@ TEST_CASE("Self-consistency") {
   SECTION("Solve simple") {
     auto        p        = green::params::params("DESCR");
     std::string res_file = random_name();
-    std::string args     = "test --verbose 1 --restart 0 --mixing_type NO_MIXING --itermax 100 --E_thr 1e-13 --results_file=" + res_file;
+    std::string args     = "test --verbose 1 --restart 0 --mixing_type NO_MIXING --itermax 100 "s
+        + "--grid_file ir/1e4.h5 --BETA 100 --E_thr 1e-13 --results_file=" + res_file;
     green::sc::define_parameters(p);
+    green::grids::define_parameters(p);
     p.define<double>("alpha", "", 0.45);
     p.define<double>("beta", "", 0.5);
     p.define<double>("gamma", "", 0.25);
@@ -210,10 +215,12 @@ TEST_CASE("Self-consistency") {
     auto        p2         = green::params::params("DESCR");
     std::string res_file_1 = random_name();
     std::string res_file_2 = random_name();
-    std::string args_1     = "test --restart 0 --itermax 4 --E_thr 1e-13 --results_file=" + res_file_1;
-    std::string args_2     = "test --restart 1 --itermax 2 --E_thr 1e-13 --results_file=" + res_file_2;
+    std::string args_1     = "test --restart 0 --itermax 4 --E_thr 1e-13 --grid_file ir/1e4.h5 --BETA 100 --results_file=" + res_file_1;
+    std::string args_2     = "test --restart 1 --itermax 2 --E_thr 1e-13 --grid_file ir/1e4.h5 --BETA 100 --results_file=" + res_file_2;
     green::sc::define_parameters(p);
     green::sc::define_parameters(p2);
+    green::grids::define_parameters(p);
+    green::grids::define_parameters(p2);
     p.define<double>("alpha", "", 0.45);
     p.define<double>("beta", "", 0.5);
     p.define<double>("gamma", "", 0.25);
@@ -232,30 +239,46 @@ TEST_CASE("Self-consistency") {
     double g2          = p2["x0"];
     double sigma1_2    = 0;
     double sigma_tau_2 = 0;
+
+    /**
+     * CASE 1: Compare a fresh start with 4 iterations against a 2x (restart + 2 iterations)
+     *         to validate restart correctness and stability.
+     */
     {
+      // First run: generate a results file from a fresh start with 4 iterations
       green::sc::sc_loop<fourth_power_equation_dyson> sc(MPI_COMM_WORLD, p);
       fourth_power_equation_solver                    solver(p["alpha"], p["beta"]);
       sc.solve(solver, h0, ovlp, g, sigma1, sigma_tau);
     }
     {
+      // Second run: restart from a results file that does not exist -- should work as a fresh start -- and run 2 iterations.
       green::sc::sc_loop<fourth_power_equation_dyson> sc(MPI_COMM_WORLD, p2);
       fourth_power_equation_solver                    solver(p2["alpha"], p2["beta"]);
       sc.solve(solver, h0, ovlp, g2, sigma1_2, sigma_tau_2);
     }
     {
+      // Third run: restart again to confirm restart is repeatable and stable. Run 2 more iterations
       green::sc::sc_loop<fourth_power_equation_dyson> sc(MPI_COMM_WORLD, p2);
       fourth_power_equation_solver                    solver(p2["alpha"], p2["beta"]);
       sc.solve(solver, h0, ovlp, g2, sigma1_2, sigma_tau_2);
     }
+    // Final value of 2 x (restart + 2 iterations) should be equal to (fresh start + 4 iterations)
     REQUIRE(std::abs(sigma_tau_2 - sigma_tau) < 1e-14);
-    std::filesystem::remove(res_file_2);
+
+    /**
+     * CASE2: Restart from an empty file
+     * 
+     */
+    std::filesystem::remove(res_file_2); 
     {
-      // create empty file to check that
+      // Create an empty results file to validate restart handling on minimal data.
       green::h5pp::archive ar(res_file_2, "w");
       ar["test"] << 1;
+      ar.set_attribute<std::string>("__grids_version__", "0.3.0");
       ar.close();
     }
     {
+      // Restart from the empty file and ensure the loop can be reinitialized
       p2["itermax"] = 4;
       g2            = p2["x0"];
       sigma1_2      = 0;
@@ -265,6 +288,60 @@ TEST_CASE("Self-consistency") {
       sc.solve(solver, h0, ovlp, g2, sigma1_2, sigma_tau_2);
     }
 
+    /**
+     * CASE 3: Restart with an old, incompatible grid file
+     *          Should throw an error due to outdated grid file (no version or version < 0.2.4)
+     */
+    // CASE: Restart with an old, incompatible grid file should throw an error
+    {
+      auto        p3         = green::params::params("DESCR");
+      std::string args_3     = "test --restart 1 --itermax 1 --E_thr 1e-13 --grid_file " + std::string(TEST_PATH)
+                               + "/old_1e4.h5 --BETA 100 --results_file=" + res_file_2;
+      green::sc::define_parameters(p3);
+      green::grids::define_parameters(p3);
+      p3.define<double>("alpha", "", 0.45);
+      p3.define<double>("beta", "", 0.5);
+      p3.define<double>("gamma", "", 0.25);
+      p3.define<double>("x0", "", 0.2);
+      p3.parse(args_3);
+      REQUIRE_THROWS_AS(green::sc::sc_loop<fourth_power_equation_dyson>(MPI_COMM_WORLD, p3), green::grids::outdated_grids_file_error);
+    }
+
+    /**
+     * CASE 4: Restart with a results file created with an old, while using new grid file in current run
+     *         Should throw an error due to outdated grid in the results file
+     */
+    std::filesystem::remove(res_file_2);
+    {
+      auto        p4         = green::params::params("DESCR");
+      std::string args_4    = "test --restart 1 --itermax 1 --E_thr 1e-13 --grid_file " + std::string(TEST_PATH)
+                               + "/old_1e4.h5 --BETA 100 --results_file=" + res_file_2;
+      green::sc::define_parameters(p4);
+      green::grids::define_parameters(p4);
+      p4.define<double>("alpha", "", 0.45);
+      p4.define<double>("beta", "", 0.5);
+      p4.define<double>("gamma", "", 0.25);
+      p4.define<double>("x0", "", 0.2);
+      p4.parse(args_4);
+      // Fresh start (even though --restart 1) using old grid file in p4
+      green::sc::sc_loop<fourth_power_equation_dyson> sc(MPI_COMM_WORLD, p4);
+      fourth_power_equation_solver                    solver(p4["alpha"], p4["beta"]);
+      REQUIRE_NOTHROW(sc.solve(solver, h0, ovlp, g2, sigma1_2, sigma_tau_2));
+    }
+    {
+      auto        p5         = green::params::params("DESCR");
+      green::sc::define_parameters(p5);
+      green::grids::define_parameters(p5);
+      p5.define<double>("alpha", "", 0.45);
+      p5.define<double>("beta", "", 0.5);
+      p5.define<double>("gamma", "", 0.25);
+      p5.define<double>("x0", "", 0.2);
+      p5.parse(args_2);
+      // Change grid file to new version in p2 and rerun sc
+      REQUIRE_THROWS_AS(green::sc::sc_loop<fourth_power_equation_dyson>(MPI_COMM_WORLD, p5), green::sc::outdated_results_file_error);
+    }
+
+    // Clean up
     std::filesystem::remove(res_file_1);
     std::filesystem::remove(res_file_2);
   }
