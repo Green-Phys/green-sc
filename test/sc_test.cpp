@@ -34,7 +34,7 @@ inline std::string random_name() {
 }
 
 // Grid file paths for testing
-const std::string GRID_FILE_NEW = std::string(TEST_PATH) + "/ir/1e4.h5";
+const std::string GRID_FILE_NEW = std::string(TEST_PATH) + "/1e4.h5";
 const std::string GRID_FILE_OLD = std::string(TEST_PATH) + "/old_1e4.h5";
 
 // Try to solve equation B*X^4 + C*X^2 - A*X + D = 0
