@@ -319,7 +319,7 @@ TEST_CASE("Self-consistency") {
     }
 
     /**
-     * CASE 4: Restart with a results file created with an old, while using new grid file in current run
+     * CASE 4: Restart with a results file created with an old grid file, while using a new grid file in the current run
      *         Should throw an error due to outdated grid in the results file
      */
     std::filesystem::remove(res_file_2);
