@@ -173,7 +173,7 @@ namespace green::sc {
       h5pp::archive ar(_results_file, "a");
       if (!ar.has_attribute("__grids_version__")) {
         // Grids attribute -- will only be performed once
-        std::string grid_version = _dyson_solver.ft().get_version();
+        const std::string& grid_version = _dyson_solver.get_grids_version();
         ar.set_attribute<std::string>("__grids_version__", grid_version);
       }
       ar["iter"] << iter;
@@ -197,28 +197,28 @@ namespace green::sc {
       if (!std::filesystem::exists(_results_file)) return;
 
       // Read grid-file version
-      std::string grid_file_version = _dyson_solver.ft().get_version();
+      const std::string& grid_file_version = _dyson_solver.get_grids_version();
 
       h5pp::archive ar(_results_file, "r");
       if (ar.has_attribute("__grids_version__")) {
         std::string grids_version_in_results;
         grids_version_in_results = ar.get_attribute<std::string>("__grids_version__");
-        ar.close();
-        if (grid_file_version < grids_version_in_results) {
+        ar.close(); // safely close before throwing
+        if (compare_version_strings(grid_file_version, grids_version_in_results) < 0) {
           throw green::grids::outdated_grids_file_error("The current green-grids version (" + grid_file_version +
                                             ") is older than the green-grids version used to create the original results file ("
                                             + grids_version_in_results +
                                             "). Please update green-grids to version " + grids_version_in_results);
-        } else if (grid_file_version > grids_version_in_results) {
+        } else if (compare_version_strings(grid_file_version, grids_version_in_results) > 0) {
           throw outdated_results_file_error("The green-grids version used to create the results file (" + grids_version_in_results +
-                                            ") is older than the minimum required green-grids version (" + green::grids::GRIDS_MIN_VERSION +
-                                            "). Please use old grid files from: " +
-                                            "https://github.com/Green-Phys/green-grids/releases/tag/v0.2.4.");
+                                            ") is older than the current specified grid file (" + grid_file_version +
+                                            "). Please download the appropriate version from: " +
+                                            "https://github.com/Green-Phys/green-grids/releases/ or https://github.com/Green-Phys/green-grids/tags");
         }
-      } else if (grid_file_version > green::grids::GRIDS_MIN_VERSION) {
-        ar.close();
+      } else if (compare_version_strings(grid_file_version, green::grids::GRIDS_MIN_VERSION) > 0) {
+        ar.close(); // safely close before throwing
         throw outdated_results_file_error("The results file was created using un-versioned grid file (equiv. to " + green::grids::GRIDS_MIN_VERSION +
-                                          ") and the current green-grids version (" + grid_file_version + ") is newer than 0.2.4.\n" + 
+                                          ") and the current green-grids version (" + grid_file_version + ") is newer.\n" + 
                                           "Please use old grid files from: https://github.com/Green-Phys/green-grids/releases/tag/v0.2.4.");
       }
     }

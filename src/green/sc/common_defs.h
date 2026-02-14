@@ -82,5 +82,33 @@ namespace green::sc {
     p.define<std::string>("input_file,", "File with input data", "input.h5");
     p.define<bool>("const_density", "Maintain constant number of electrons through iterations", true);
   }
+
+  inline int compare_version_strings(const std::string& v1, const std::string& v2) {
+    int major_V1 = 0, minor_V1 = 0, patch_V1 = 0;
+    int major_V2 = 0, minor_V2 = 0, patch_V2 = 0;
+    int def_return = 0;
+  
+    char suffixV[32] = "";
+    char suffixM[32] = "";
+  
+    int parsed_1 = std::sscanf(v1.c_str(), "%d.%d.%d%30s", &major_V1, &minor_V1, &patch_V1, suffixV);
+    int parsed_2 = std::sscanf(v2.c_str(), "%d.%d.%d%30s", &major_V2, &minor_V2, &patch_V2, suffixM);
+
+    if (parsed_1 < 3 || parsed_2 < 3) {
+      throw std::runtime_error("Version string format is incorrect. Expected format: major.minor.patch[suffix]");
+    }
+  
+    if (major_V1 != major_V2) {
+      return major_V1 > major_V2 ? 1 : -1;
+    }
+    if (minor_V1 != minor_V2) {
+      return minor_V1 > minor_V2 ? 1 : -1;
+    }
+    if (patch_V1 != patch_V2) {
+      return patch_V1 > patch_V2 ? 1 : -1;
+    }
+
+    return def_return;
+  }
 }  // namespace green::sc
 #endif  // GREEN_SC_COMMON_DEFS_H

@@ -33,6 +33,10 @@ inline std::string random_name() {
   return str.substr(0, 32) + ".h5";  // assumes 32 < number of characters in str
 }
 
+// Grid file paths for testing
+const std::string GRID_FILE_NEW = std::string(TEST_PATH) + "/ir/1e4.h5";
+const std::string GRID_FILE_OLD = std::string(TEST_PATH) + "/old_1e4.h5";
+
 // Try to solve equation B*X^4 + C*X^2 - A*X + D = 0
 // It leads to following itertative scheme:
 // X = \alpha + \beta X^4 + \gamma X^2,
@@ -60,9 +64,10 @@ public:
   }
   double diff(const G&, const Sigma1&, const Sigma_tau&) { return _diff; }
   void   dump_iteration(size_t, const G&, const Sigma1&, const Sigma_tau&, const std::string&) {};
-  double mu() const { return _mu; }
+  double mu() const { return 0; }
   double& mu() { return _mu; }
   const green::grids::transformer_t& ft() const { return _ft; }
+  const std::string& get_grids_version() const { return _ft.get_version(); }
 
 private:
   double _alpha;
@@ -215,8 +220,10 @@ TEST_CASE("Self-consistency") {
     auto        p2         = green::params::params("DESCR");
     std::string res_file_1 = random_name();
     std::string res_file_2 = random_name();
-    std::string args_1     = "test --restart 0 --itermax 4 --E_thr 1e-13 --grid_file ir/1e4.h5 --BETA 100 --results_file=" + res_file_1;
-    std::string args_2     = "test --restart 1 --itermax 2 --E_thr 1e-13 --grid_file ir/1e4.h5 --BETA 100 --results_file=" + res_file_2;
+    std::string args_1     = "test --restart 0 --itermax 4 --E_thr 1e-13 --grid_file " + std::string(GRID_FILE_NEW)
+                              + " --BETA 100 --results_file=" + res_file_1;
+    std::string args_2     = "test --restart 1 --itermax 2 --E_thr 1e-13 --grid_file " + std::string(GRID_FILE_NEW)
+                              + " --BETA 100 --results_file=" + res_file_2;
     green::sc::define_parameters(p);
     green::sc::define_parameters(p2);
     green::grids::define_parameters(p);
@@ -271,10 +278,14 @@ TEST_CASE("Self-consistency") {
      */
     std::filesystem::remove(res_file_2); 
     {
+      // Read __grids_version__ from the new grid files
+      green::h5pp::archive ar_grid(GRID_FILE_NEW, "r");
+      std::string         new_grid_file_version = ar_grid.get_attribute<std::string>("__grids_version__");
+      ar_grid.close();
       // Create an empty results file to validate restart handling on minimal data.
       green::h5pp::archive ar(res_file_2, "w");
       ar["test"] << 1;
-      ar.set_attribute<std::string>("__grids_version__", "0.3.0");
+      ar.set_attribute<std::string>("__grids_version__", new_grid_file_version);
       ar.close();
     }
     {
@@ -295,8 +306,8 @@ TEST_CASE("Self-consistency") {
     // CASE: Restart with an old, incompatible grid file should throw an error
     {
       auto        p3         = green::params::params("DESCR");
-      std::string args_3     = "test --restart 1 --itermax 1 --E_thr 1e-13 --grid_file " + std::string(TEST_PATH)
-                               + "/old_1e4.h5 --BETA 100 --results_file=" + res_file_2;
+      std::string args_3     = "test --restart 1 --itermax 1 --E_thr 1e-13 --grid_file " + GRID_FILE_OLD
+                               + " --BETA 100 --results_file=" + res_file_2;
       green::sc::define_parameters(p3);
       green::grids::define_parameters(p3);
       p3.define<double>("alpha", "", 0.45);
@@ -314,8 +325,8 @@ TEST_CASE("Self-consistency") {
     std::filesystem::remove(res_file_2);
     {
       auto        p4         = green::params::params("DESCR");
-      std::string args_4    = "test --restart 1 --itermax 1 --E_thr 1e-13 --grid_file " + std::string(TEST_PATH)
-                               + "/old_1e4.h5 --BETA 100 --results_file=" + res_file_2;
+      std::string args_4    = "test --restart 1 --itermax 1 --E_thr 1e-13 --grid_file " + GRID_FILE_OLD
+                              + " --BETA 100 --results_file=" + res_file_2;
       green::sc::define_parameters(p4);
       green::grids::define_parameters(p4);
       p4.define<double>("alpha", "", 0.45);
