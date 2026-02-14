@@ -274,7 +274,7 @@ TEST_CASE("Self-consistency") {
 
     /**
      * CASE2: Restart from an empty file
-     * 
+     *
      */
     std::filesystem::remove(res_file_2); 
     {
