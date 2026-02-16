@@ -47,7 +47,7 @@ Class has to be parametrized with user defined `Dyson` type. `Dyson` publicly de
 - `solve(G&, Sigma1&, Sigma_tau&)` - for a given self-energies
 - `diff(G&, Sigma1&, Sigma_tau&)` - computes convergence creteria
 - `dump_iteration(int iter, const std::string&f)` - store additional data into a results file `f` for a given iteration `iter`.
-- `std::string& get_grids_version()` - returns either the version of IR/Chebyshev transformation grid files if [`green-grids`](https://github.com/Green-Phys/green-grids.git) is used. Otherwise, it should return `green::grids::GRIDS_MIN_VERSION` as a placeholder.
+- `const std::string& get_grids_version() const` - returns either the version of IR/Chebyshev transformation grid files if [`green-grids`](https://github.com/Green-Phys/green-grids.git) is used, otherwise, it should return `green::grids::GRIDS_MIN_VERSION` as a placeholder.
 
 The method `solve` needs four parameters:
 
@@ -83,7 +83,7 @@ public:
 
   /**
    * @brief Returns a dummy min grids version used in IR / Chebyshev Fourier transformations
-   * NOTE:  Ideally, the Dyson solver will depend on green-grids for IR / Chebyshev Fourier transformation;
+   * NOTE:  Ideally, the Dyson solver depends on green-grids for IR / Chebyshev Fourier transformation;
    *        In that case, define a class variable:
    * 
    *        green::grids::transformer_t _ft;
