@@ -22,6 +22,7 @@
 #define GREEN_SC_COMMON_DEFS_H
 
 #include <green/ndarray/ndarray.h>
+#include <green/params/params.h>
 
 namespace green::sc {
   /**
@@ -81,6 +82,36 @@ namespace green::sc {
     p.define<double>("E_thr_sp", "Energy convergence threshold if run in single precision", 1e-5);
     p.define<std::string>("input_file,", "File with input data", "input.h5");
     p.define<bool>("const_density", "Maintain constant number of electrons through iterations", true);
+  }
+
+  inline int compare_version_strings(const std::string& v1, const std::string& v2) {
+    int major_V1 = 0, minor_V1 = 0, patch_V1 = 0;
+    int major_V2 = 0, minor_V2 = 0, patch_V2 = 0;
+
+    char suffix_V1[32] = "";
+    char suffix_V2[32] = "";
+
+    int parsed_1 = std::sscanf(v1.c_str(), "%d.%d.%d%30s", &major_V1, &minor_V1, &patch_V1, suffix_V1);
+    int parsed_2 = std::sscanf(v2.c_str(), "%d.%d.%d%30s", &major_V2, &minor_V2, &patch_V2, suffix_V2);
+
+    if (parsed_1 < 3) {
+      throw std::runtime_error("First version string (v1) failed to parse: '" + v1 + "'. Expected format: major.minor.patch[suffix]");
+    }
+    if (parsed_2 < 3) {
+      throw std::runtime_error("Second version string (v2) failed to parse: '" + v1 + "'. Expected format: major.minor.patch[suffix]");
+    }
+
+    if (major_V1 != major_V2) {
+      return major_V1 > major_V2 ? 1 : -1;
+    }
+    if (minor_V1 != minor_V2) {
+      return minor_V1 > minor_V2 ? 1 : -1;
+    }
+    if (patch_V1 != patch_V2) {
+      return patch_V1 > patch_V2 ? 1 : -1;
+    }
+
+    return 0;
   }
 }  // namespace green::sc
 #endif  // GREEN_SC_COMMON_DEFS_H
