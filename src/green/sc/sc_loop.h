@@ -80,7 +80,6 @@ namespace green::sc {
       if (_restart) {
         check_grids_version_consistency();
       }
-      
     }
 
     virtual ~sc_loop() = default;
@@ -189,8 +188,12 @@ namespace green::sc {
      * This is to prevent users from accidentally restarting from a results file that was generated with
      * an older version of green-grids, which can lead to silent errors in the results.
      * 
-     * 1. If the results file does not have a green-grids version attribute, then check if current version is 0.2.4 (BASE VERSION)
-     * 2. If the results file has a green-grids version attribute, check if it >= 0.2.4
+     * 1. If the results file does not have a green-grids version attribute, treat it as having been
+     *    generated with the baseline grids version (GRIDS_MIN_VERSION, currently 0.2.4) and check
+     *    that the current grid-file version is not newer; otherwise an error is raised.
+     * 2. If the results file has a green-grids version attribute, compare that version with the current
+     *    grid-file version and distinguish older, equal, and newer cases, allowing only compatible
+     *    combinations and throwing specific errors when there is a mismatch.
      */
     void check_grids_version_consistency() {
       // If results file does not exist, nothing to check
@@ -220,6 +223,8 @@ namespace green::sc {
         throw outdated_results_file_error("The results file was created using un-versioned grid file (equiv. to " + green::grids::GRIDS_MIN_VERSION +
                                           ") and the current green-grids version (" + grid_file_version + ") is newer.\n" + 
                                           "Please use old grid files from: https://github.com/Green-Phys/green-grids/releases/tag/v0.2.4.");
+      } else {
+        ar.close();
       }
     }
 

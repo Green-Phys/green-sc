@@ -273,10 +273,10 @@ TEST_CASE("Self-consistency") {
     REQUIRE(std::abs(sigma_tau_2 - sigma_tau) < 1e-14);
 
     /**
-     * CASE2: Restart from an empty file
+     * CASE 2: Restart from an empty file
      *
      */
-    std::filesystem::remove(res_file_2); 
+    std::filesystem::remove(res_file_2);
     {
       // Read __grids_version__ from the new grid files
       green::h5pp::archive ar_grid(GRID_FILE_NEW, "r");
@@ -348,7 +348,8 @@ TEST_CASE("Self-consistency") {
       p5.define<double>("gamma", "", 0.25);
       p5.define<double>("x0", "", 0.2);
       p5.parse(args_2);
-      // Change grid file to new version in p2 and rerun sc
+      // Initialize p5 from args_2 (using the new grid file) and attempt to restart from res_file_2,
+      // which was created with an older grid file; this should trigger outdated_results_file_error.
       REQUIRE_THROWS_AS(green::sc::sc_loop<fourth_power_equation_dyson>(MPI_COMM_WORLD, p5), green::sc::outdated_results_file_error);
     }
 
