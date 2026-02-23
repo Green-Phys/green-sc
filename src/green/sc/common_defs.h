@@ -98,7 +98,7 @@ namespace green::sc {
       throw std::runtime_error("First version string (v1) failed to parse: '" + v1 + "'. Expected format: major.minor.patch[suffix]");
     }
     if (parsed_2 < 3) {
-      throw std::runtime_error("Second version string (v2) failed to parse: '" + v1 + "'. Expected format: major.minor.patch[suffix]");
+      throw std::runtime_error("Second version string (v2) failed to parse: '" + v2 + "'. Expected format: major.minor.patch[suffix]");
     }
 
     if (major_V1 != major_V2) {
