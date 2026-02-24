@@ -23,6 +23,9 @@
 
 #include <green/ndarray/ndarray.h>
 #include <green/params/params.h>
+#include <green/grids/common_defs.h>
+#include <green/h5pp/archive.h>
+#include "except.h"
 
 namespace green::sc {
   /**
@@ -112,6 +115,52 @@ namespace green::sc {
     }
 
     return 0;
+  }
+
+  /**
+   * @brief Checks consistency between grid-file version used in current run vs. the version
+   * used to generate the results file that is being (re-)started from.
+   * This is to prevent users from accidentally restarting from a results file that was generated with
+   * an older version of green-grids, which can lead to silent errors in the results.
+   * 
+   * 1. If the results file does not have a green-grids version attribute, treat it as having been
+   *    generated with the baseline grids version (GRIDS_MIN_VERSION, currently 0.2.4) and check
+   *    that the current grid-file version is not newer; otherwise an error is raised.
+   * 2. If the results file has a green-grids version attribute, compare that version with the current
+   *    grid-file version and distinguish older, equal, and newer cases, allowing only compatible
+   *    combinations and throwing specific errors when there is a mismatch.
+   * 
+   * @param results_file - path to the results file that is being restarted from
+   * @param grid_file_version - version of green-grids used in the current run (can be obtained from DysonSolver::get_grids_version())
+   */
+  void check_grids_version_consistency(std::string results_file, const std::string grid_file_version) {
+    // If results file does not exist, nothing to check
+    if (!std::filesystem::exists(results_file)) return;
+
+    h5pp::archive ar(results_file, "r");
+    if (ar.has_attribute("__grids_version__")) {
+      std::string grids_version_in_results;
+      grids_version_in_results = ar.get_attribute<std::string>("__grids_version__");
+      ar.close(); // safely close before throwing
+      if (compare_version_strings(grid_file_version, grids_version_in_results) < 0) {
+        throw green::grids::outdated_grids_file_error("The current green-grids version (" + grid_file_version +
+                                          ") is older than the green-grids version used to create the original results file ("
+                                          + grids_version_in_results +
+                                          "). Please update green-grids to version " + grids_version_in_results);
+      } else if (compare_version_strings(grid_file_version, grids_version_in_results) > 0) {
+        throw outdated_results_file_error("The green-grids version used to create the results file (" + grids_version_in_results +
+                                          ") is older than the current specified grid file (" + grid_file_version +
+                                          "). Please download the appropriate version from: " +
+                                          "https://github.com/Green-Phys/green-grids/releases/ or https://github.com/Green-Phys/green-grids/tags");
+      }
+    } else if (compare_version_strings(grid_file_version, green::grids::GRIDS_MIN_VERSION) > 0) {
+      ar.close(); // safely close before throwing
+      throw outdated_results_file_error("The results file was created using un-versioned grid file (equiv. to " + green::grids::GRIDS_MIN_VERSION +
+                                        ") and the current green-grids version (" + grid_file_version + ") is newer.\n" + 
+                                        "Please use old grid files from: https://github.com/Green-Phys/green-grids/releases/tag/v0.2.4.");
+    } else {
+      ar.close();
+    }
   }
 }  // namespace green::sc
 #endif  // GREEN_SC_COMMON_DEFS_H
