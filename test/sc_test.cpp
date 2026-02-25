@@ -634,6 +634,24 @@ TEST_CASE("FockSigmaVectorSpace") { test_vector_space<green::opt::vector_space_f
 
 TEST_CASE("CyclicFockSigmaVectorSpace") { test_vector_space<green::opt::cyclic_vector_space_fock_sigma>(); }
 
+TEST_CASE("Grids Version Consistency") {
+  // 1. Starting with new file (does not exist).
+  //    Version check should pass because there's nothing to check / no inconsistency
+  std::string res_file_1 = random_name();
+  REQUIRE_NOTHROW(green::sc::check_grids_version_consistency(res_file_1, "0.2.4"));
+
+  // 2. Open the file and add __grids_version__ attribute
+  green::h5pp::archive ar_res_1(res_file_1, "w");
+  ar_res_1.set_attribute<std::string>("__grids_version__", "0.2.4");
+  ar_res_1.close();
+  REQUIRE_NOTHROW(green::sc::check_grids_version_consistency(res_file_1, green::grids::GRIDS_MIN_VERSION));
+  REQUIRE_THROWS_AS(green::sc::check_grids_version_consistency(res_file_1, "0.2.3"),
+                    green::grids::outdated_grids_file_error);
+  REQUIRE_THROWS_AS(green::sc::check_grids_version_consistency(res_file_1, "0.2.5"),
+                    green::sc::outdated_results_file_error);
+  std::filesystem::remove(res_file_1);
+}
+
 int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
   int result = Catch::Session().run(argc, argv);
