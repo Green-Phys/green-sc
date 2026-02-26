@@ -78,7 +78,7 @@ namespace green::sc {
         _itermax(p["itermax"]), _iter(0), _e_thr(p["threshold"]), _e_thr_sp(p["E_thr_sp"]), _input_path(p["input_file"]),
         _results_file(p["results_file"]), _restart(p["restart"]), _dyson_solver(p), _mix(p), _context(comm) {
       if (_restart) {
-        green::grids::check_grids_version_in_hdf5(p["results_file"], _dyson_solver.get_grids_version());
+        green::grids::check_grids_version_in_hdf5(_results_file, _dyson_solver.get_grids_version());
       }
     }
 
