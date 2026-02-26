@@ -35,11 +35,6 @@ namespace green::sc {
     explicit sc_diis_vsp_error(const std::string& what) : std::runtime_error(what) {}
   };
 
-  class outdated_results_file_error : public std::runtime_error {
-  public:
-    explicit outdated_results_file_error(const std::string& what) : std::runtime_error(what) {}
-  };
-
 }  // namespace green::sc
 
 #endif  // GREEN_SC_EXCEPT_H

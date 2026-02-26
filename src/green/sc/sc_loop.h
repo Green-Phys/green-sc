@@ -78,7 +78,7 @@ namespace green::sc {
         _itermax(p["itermax"]), _iter(0), _e_thr(p["threshold"]), _e_thr_sp(p["E_thr_sp"]), _input_path(p["input_file"]),
         _results_file(p["results_file"]), _restart(p["restart"]), _dyson_solver(p), _mix(p), _context(comm) {
       if (_restart) {
-        check_grids_version_consistency();
+        green::grids::check_grids_version_in_hdf5(_results_file, _dyson_solver.get_grids_version());
       }
     }
 
@@ -180,52 +180,6 @@ namespace green::sc {
       internal::write(sigma_tau, "iter" + std::to_string(iter) + "/Selfenergy/data", ar);
       internal::write(g_tau, "iter" + std::to_string(iter) + "/G_tau/data", ar);
       ar.close();
-    }
-
-    /**
-     * @brief Checks consistency between grid-file version used in current run vs. the version
-     * used to generate the results file that is being restarted from.
-     * This is to prevent users from accidentally restarting from a results file that was generated with
-     * an older version of green-grids, which can lead to silent errors in the results.
-     * 
-     * 1. If the results file does not have a green-grids version attribute, treat it as having been
-     *    generated with the baseline grids version (GRIDS_MIN_VERSION, currently 0.2.4) and check
-     *    that the current grid-file version is not newer; otherwise an error is raised.
-     * 2. If the results file has a green-grids version attribute, compare that version with the current
-     *    grid-file version and distinguish older, equal, and newer cases, allowing only compatible
-     *    combinations and throwing specific errors when there is a mismatch.
-     */
-    void check_grids_version_consistency() {
-      // If results file does not exist, nothing to check
-      if (!std::filesystem::exists(_results_file)) return;
-
-      // Read grid-file version
-      const std::string& grid_file_version = _dyson_solver.get_grids_version();
-
-      h5pp::archive ar(_results_file, "r");
-      if (ar.has_attribute("__grids_version__")) {
-        std::string grids_version_in_results;
-        grids_version_in_results = ar.get_attribute<std::string>("__grids_version__");
-        ar.close(); // safely close before throwing
-        if (compare_version_strings(grid_file_version, grids_version_in_results) < 0) {
-          throw green::grids::outdated_grids_file_error("The current green-grids version (" + grid_file_version +
-                                            ") is older than the green-grids version used to create the original results file ("
-                                            + grids_version_in_results +
-                                            "). Please update green-grids to version " + grids_version_in_results);
-        } else if (compare_version_strings(grid_file_version, grids_version_in_results) > 0) {
-          throw outdated_results_file_error("The green-grids version used to create the results file (" + grids_version_in_results +
-                                            ") is older than the current specified grid file (" + grid_file_version +
-                                            "). Please download the appropriate version from: " +
-                                            "https://github.com/Green-Phys/green-grids/releases/ or https://github.com/Green-Phys/green-grids/tags");
-        }
-      } else if (compare_version_strings(grid_file_version, green::grids::GRIDS_MIN_VERSION) > 0) {
-        ar.close(); // safely close before throwing
-        throw outdated_results_file_error("The results file was created using un-versioned grid file (equiv. to " + green::grids::GRIDS_MIN_VERSION +
-                                          ") and the current green-grids version (" + grid_file_version + ") is newer.\n" + 
-                                          "Please use old grid files from: https://github.com/Green-Phys/green-grids/releases/tag/v0.2.4.");
-      } else {
-        ar.close();
-      }
     }
 
     DysonSolver& dyson_solver() { return _dyson_solver; }

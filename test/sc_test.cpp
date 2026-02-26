@@ -350,7 +350,7 @@ TEST_CASE("Self-consistency") {
       p5.parse(args_2);
       // Initialize p5 from args_2 (using the new grid file) and attempt to restart from res_file_2,
       // which was created with an older grid file; this should trigger outdated_results_file_error.
-      REQUIRE_THROWS_AS(green::sc::sc_loop<fourth_power_equation_dyson>(MPI_COMM_WORLD, p5), green::sc::outdated_results_file_error);
+      REQUIRE_THROWS_AS(green::sc::sc_loop<fourth_power_equation_dyson>(MPI_COMM_WORLD, p5), green::grids::outdated_results_file_error);
     }
 
     // Clean up
