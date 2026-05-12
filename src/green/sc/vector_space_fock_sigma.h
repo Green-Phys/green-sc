@@ -154,13 +154,13 @@ namespace green::opt {
      * update indices values
      */
     void update_indices() {
-      if (!utils::context.global_rank) {
+      if (!utils::context().global_rank) {
         h5pp::archive vsp_ar(_m_dbase, "a");
         vsp_ar[_vecname + "/m_size"] << _m_size;
         vsp_ar[_vecname + "/diis_size"] << _diis_size;
         vsp_ar.close();
       }
-      MPI_Barrier(utils::context.global);
+      MPI_Barrier(utils::context().global);
     }
 
     /**
@@ -198,9 +198,9 @@ namespace green::opt {
       // we don't have automatic purge therefore we have to make sure that vector space
       // does not grow above maximum capacity
       if (_m_size == _diis_size) throw sc::sc_diis_vsp_error("VSpace is at it's maximum capacity");
-      MPI_Barrier(utils::context.global);
-      if (!utils::context.global_rank) write_to_dbase(vec);
-      MPI_Barrier(utils::context.global);
+      MPI_Barrier(utils::context().global);
+      if (!utils::context().global_rank) write_to_dbase(vec);
+      MPI_Barrier(utils::context().global);
       _m_size++;
       update_indices();
     }
@@ -266,7 +266,7 @@ namespace green::opt {
       if (i >= _m_size) {
         throw sc::sc_diis_vsp_error("Vector index of the VSpace container is out of bounds");
       }
-      if (!utils::context.global_rank) {
+      if (!utils::context().global_rank) {
         h5pp::archive vsp_ar(_m_dbase, "a");
         std::string   p   = "/" + _vecname;
         std::string   src = p + "/vec" + std::to_string(i);
@@ -279,7 +279,7 @@ namespace green::opt {
         }
         vsp_ar.close();
       }
-      MPI_Barrier(utils::context.global);
+      MPI_Barrier(utils::context().global);
       _m_size--;
       update_indices();
     }

@@ -71,7 +71,7 @@ namespace green::sc {
     void update(size_t, double, const S1&, const S1&, G&, S1&, St&) override {};
 
     void print_name() override {
-      if (utils::context.global_rank == 0) std::cout << "No mixing strategy will be applied" << std::endl;
+      if (utils::context().global_rank == 0) std::cout << "No mixing strategy will be applied" << std::endl;
     }
   };
 
@@ -89,7 +89,7 @@ namespace green::sc {
         throw sc_incorrect_mixing_error("Mixing should be in (0,2) interval");
       }
       if (m > 1) {
-        if (utils::context.global_rank == 0)
+        if (utils::context().global_rank == 0)
           std::cout << "Mixing parameter is set to be bigger than one, in the over-relaxation regime convergence potentially can "
                        "be unstable."
                     << std::endl;
@@ -106,7 +106,7 @@ namespace green::sc {
     };
 
     void print_name() override {
-      if (utils::context.global_rank == 0)
+      if (utils::context().global_rank == 0)
         std::cout << "Green's function mixing strategy will be applied: " << _mixing_weight << "*G_new + " << (1 - _mixing_weight)
                   << "*G_old" << std::endl;
     }
@@ -124,7 +124,7 @@ namespace green::sc {
         throw sc_incorrect_mixing_error("Mixing should be in (0,2) interval");
       }
       if (m > 1) {
-        if (utils::context.global_rank == 0)
+        if (utils::context().global_rank == 0)
           std::cout << "Mixing parameter is set to be bigger than one, in the over-relaxation regime convergence potentially can "
                        "be unstable."
                     << std::endl;
@@ -145,7 +145,7 @@ namespace green::sc {
     };
 
     void print_name() override {
-      if (utils::context.global_rank == 0)
+      if (utils::context().global_rank == 0)
         std::cout << "Self-energy mixing strategy will be applied: " << _mixing_weight << "*Sigma_new + " << (1 - _mixing_weight)
                   << "*Sigma_old" << std::endl;
     }
@@ -175,16 +175,16 @@ namespace green::sc {
         _diis(_diis_start, _diis_size, p["verbose"]), _x_vsp(_diis_file, _diis_size + 1),
         _res_vsp(_diis_file, _diis_size, "residuals"), _ft(p), _commutator(commutator) {
       if (!p["restart"].as<bool>() || !p["diis_restart"].as<bool>()) {
-        MPI_Barrier(utils::context.global);
-        if (!utils::context.global_rank) std::filesystem::remove(_diis_file);
-        MPI_Barrier(utils::context.global);
+        MPI_Barrier(utils::context().global);
+        if (!utils::context().global_rank) std::filesystem::remove(_diis_file);
+        MPI_Barrier(utils::context().global);
         _need_reinit = false;
         return;
       }
       if (!_res_vsp.restore() || !_x_vsp.restore()) {
-        MPI_Barrier(utils::context.global);
-        if (!utils::context.global_rank) std::filesystem::remove(_diis_file);
-        MPI_Barrier(utils::context.global);
+        MPI_Barrier(utils::context().global);
+        if (!utils::context().global_rank) std::filesystem::remove(_diis_file);
+        MPI_Barrier(utils::context().global);
         _need_reinit = false;
         return;
       }
@@ -243,7 +243,7 @@ namespace green::sc {
     };
 
     void print_name() override {
-      if (utils::context.global_rank == 0) std::cout << "DDIIS/CDIIS mixing strategy will be applied" << std::endl;
+      if (utils::context().global_rank == 0) std::cout << "DDIIS/CDIIS mixing strategy will be applied" << std::endl;
     };
 
   private:

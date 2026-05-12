@@ -365,7 +365,7 @@ TEST_CASE("Shared object init") {
   std::string                 res_file_1 = random_name();
   {
     x.fence();
-    if (!green::utils::context.node_rank) x.object()(0, 0) = 100;
+    if (!green::utils::context().node_rank) x.object()(0, 0) = 100;
     x.fence();
     green::h5pp::archive ar(res_file_1, "w");
     ar["test"] << x.object();
@@ -561,10 +561,10 @@ void test_vector_space() {
   s1.set_value(1);
   s1_0 << s1;
   s_t.fence();
-  if (!green::utils::context.global_rank) s_t.object().set_value(0);
+  if (!green::utils::context().global_rank) s_t.object().set_value(0);
   s_t.fence();
   s_t_0.fence();
-  if (!green::utils::context.global_rank) s_t_0.object().set_value(0);
+  if (!green::utils::context().global_rank) s_t_0.object().set_value(0);
   s_t_0.fence();
 
   std::string diis_file = random_name();
