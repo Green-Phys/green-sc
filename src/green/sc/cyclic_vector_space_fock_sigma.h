@@ -144,14 +144,14 @@ namespace green::opt {
     }
 
     void update_indices() {
-      if (!utils::context.global_rank) {
+      if (!utils::context().global_rank) {
         h5pp::archive vsp_ar(_m_dbase, "a");
         vsp_ar[_vecname + "/m_size"] << _m_size;
         vsp_ar[_vecname + "/index"] << _index;
         vsp_ar[_vecname + "/diis_size"] << _diis_size;
         vsp_ar.close();
       }
-      MPI_Barrier(utils::context.global);
+      MPI_Barrier(utils::context().global);
     }
 
     /**
@@ -179,9 +179,9 @@ namespace green::opt {
      * **/
     void add(const fock_sigma<S1, St>& Vec) {
       if (_m_size == _diis_size) throw sc::sc_diis_vsp_error("VSpace is at it's maximum capacity");
-      MPI_Barrier(utils::context.global);
-      if (!utils::context.global_rank) write_to_dbase(_index, Vec);
-      MPI_Barrier(utils::context.global);
+      MPI_Barrier(utils::context().global);
+      if (!utils::context().global_rank) write_to_dbase(_index, Vec);
+      MPI_Barrier(utils::context().global);
       _m_size++;
       _index++;
       update_indices();

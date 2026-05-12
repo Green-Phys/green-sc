@@ -96,7 +96,7 @@ namespace green::opt {
 
     // k-points and spin are moved as an outer loop,
     // because in future it is possible to make it MPI-parallel
-    for (size_t isk = utils::context.node_rank; isk < ns * nk; isk += utils::context.node_size) {
+    for (size_t isk = utils::context().node_rank; isk < ns * nk; isk += utils::context().node_size) {
       size_t is = isk / nk;
       size_t ik = isk % nk;
       Sigma_k.set_zero();
@@ -143,7 +143,7 @@ namespace green::opt {
     MPI_Datatype dt_matrix     = utils::create_matrix_datatype<std::complex<double>>(nao * nao);
     MPI_Op       matrix_sum_op = utils::create_matrix_operation<std::complex<double>>();
     commutator_core(ft, C_t, G_t, FS_t.get_fock(), FS_t.get_sigma(), mu, H0, S);
-    utils::allreduce(MPI_IN_PLACE, C_t.data(), C_t.size() / (nao * nao), dt_matrix, matrix_sum_op, utils::context.internode_comm);
+    utils::allreduce(MPI_IN_PLACE, C_t.data(), C_t.size() / (nao * nao), dt_matrix, matrix_sum_op, utils::context().internode_comm);
     MPI_Type_free(&dt_matrix);
     MPI_Op_free(&matrix_sum_op);
   }

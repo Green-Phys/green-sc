@@ -82,7 +82,7 @@ namespace green::sc::internal {
   template <typename T, size_t N, typename C>
   utils::shared_object<tensor<T, N>>& operator*=(utils::shared_object<tensor<T, N>>& lhs, C rhs) {
     lhs.fence();
-    if (!utils::context.node_rank) lhs.object() *= rhs;
+    if (!utils::context().node_rank) lhs.object() *= rhs;
     lhs.fence();
     return lhs;
   }
@@ -91,7 +91,7 @@ namespace green::sc::internal {
   utils::shared_object<tensor<T, N>>& operator+=(utils::shared_object<tensor<T, N>>&       lhs,
                                                  const utils::shared_object<tensor<T, N>>& rhs) {
     lhs.fence();
-    if (!utils::context.node_rank) lhs.object() += rhs.object();
+    if (!utils::context().node_rank) lhs.object() += rhs.object();
     lhs.fence();
     return lhs;
   }
@@ -129,7 +129,7 @@ namespace green::sc::internal {
   template <typename T, size_t N>
   void assign(utils::shared_object<tensor<T, N>>& lhs, const utils::shared_object<tensor<T, N>>& rhs) {
     lhs.fence();
-    if (!utils::context.node_rank) lhs.object() << rhs.object();
+    if (!utils::context().node_rank) lhs.object() << rhs.object();
     lhs.fence();
   }
 
@@ -145,7 +145,7 @@ namespace green::sc::internal {
   template <typename T, size_t N>
   void set_zero(utils::shared_object<tensor<T, N>>& lhs) {
     lhs.fence();
-    if (!utils::context.node_rank) lhs.object().set_zero();
+    if (!utils::context().node_rank) lhs.object().set_zero();
     lhs.fence();
   }
 
@@ -176,7 +176,7 @@ namespace green::sc::internal {
   template <typename T>
   void read_data(utils::shared_object<T>& tmp, const std::string& fname, const std::string& data_path) {
     tmp.fence();
-    if (!utils::context.node_rank) {
+    if (!utils::context().node_rank) {
       h5pp::archive ar(fname);
       ar[data_path] >> tmp.object();
       ar.close();
@@ -196,7 +196,7 @@ namespace green::sc::internal {
    */
   inline void update(utils::shared_object<ztensor<5>>& obj_n, utils::shared_object<ztensor<5>>& obj_n_1, double mixing_weight) {
     obj_n.fence();
-    if (!utils::context.node_rank) {
+    if (!utils::context().node_rank) {
       obj_n.object() *= mixing_weight;
       obj_n.object() += obj_n_1.object() * (1.0 - mixing_weight);
     }
@@ -222,7 +222,7 @@ namespace green::sc::internal {
   template <size_t N>
   void read(utils::shared_object<ztensor<N>>& v, const std::string& path, h5pp::archive& ar) {
     v.fence();
-    if (!utils::context.node_rank) ar[path] >> v.object();
+    if (!utils::context().node_rank) ar[path] >> v.object();
     v.fence();
   }
 
